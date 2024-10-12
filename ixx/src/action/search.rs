@@ -9,8 +9,8 @@ pub(crate) fn search(module: SearchModule) -> anyhow::Result<()> {
   let index = Index::read_from(&mut file)?;
 
   let result = index.search(&module.query, module.max_results as usize)?;
-  for option in result {
-    println!("{}", option);
+  for (idx, name) in result {
+    println!("idx: {}, name: {}", idx, name);
   }
 
   Ok(())

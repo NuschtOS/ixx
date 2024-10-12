@@ -1,9 +1,4 @@
-use std::{
-  collections::{hash_map::Entry, BTreeMap, HashMap},
-  fs::File,
-  path::Path,
-  sync::LazyLock,
-};
+use std::{collections::BTreeMap, fs::File, path::Path, sync::LazyLock};
 
 use libixx::Index;
 use syntect::{highlighting::ThemeSet, html::highlighted_html_for_string, parsing::SyntaxSet};
@@ -11,33 +6,22 @@ use syntect::{highlighting::ThemeSet, html::highlighted_html_for_string, parsing
 use crate::{args::IndexModule, option};
 
 pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
-  let mut options: BTreeMap<String, option::Option> = BTreeMap::new();
+  let mut raw_options: BTreeMap<String, option::Option> = BTreeMap::new();
 
   for path in module.files {
     println!("Parsing {}", path.to_string_lossy());
     let file = File::open(path)?;
-    options.append(&mut serde_json::from_reader(file)?);
+    raw_options.append(&mut serde_json::from_reader(file)?);
   }
 
-  println!("Read {} options", options.len());
+  println!("Read {} options", raw_options.len());
 
-  let mut index = Index::new();
+  let mut index = Index::default();
+  let mut options = Vec::new();
 
-  let mut buckets = HashMap::new();
-
-  for (name, option) in options {
+  for (name, option) in raw_options {
     index.push(&name);
-
-    let option = into_option(&name, option);
-
-    match buckets.entry(libixx::hash(&name)) {
-      Entry::Vacant(vac) => {
-        vac.insert(vec![option]);
-      }
-      Entry::Occupied(mut occ) => {
-        occ.get_mut().push(option);
-      }
-    }
+    options.push(into_option(&name, option));
   }
 
   println!("Writing index to {}", module.output.to_string_lossy());
@@ -51,9 +35,9 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
     std::fs::create_dir("meta")?;
   }
 
-  for (name, bucket) in buckets {
-    let mut file = File::create(format!("meta/{}.json", name))?;
-    serde_json::to_writer(&mut file, &bucket)?;
+  for (idx, chunk) in options.chunks(module.chunk_size).enumerate() {
+    let mut file = File::create(format!("meta/{}.json", idx))?;
+    serde_json::to_writer(&mut file, &chunk)?;
   }
 
   Ok(())

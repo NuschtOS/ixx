@@ -20,6 +20,9 @@ pub(super) struct IndexModule {
 
   #[clap(short, long, default_value = "index.ixx")]
   pub(super) output: PathBuf,
+
+  #[clap(short, long, default_value = "100")]
+  pub(super) chunk_size: usize,
 }
 
 #[derive(Parser)]
