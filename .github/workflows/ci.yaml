@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        module: [ ixx, fixx ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find Version
+        if: startsWith(github.ref, 'refs/tags/')
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: image
+          tags: type=semver,pattern={{version}}
+
+      - name: Set Cargo.toml version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" fixx/Cargo.toml          
+          sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" ixx/Cargo.toml
+          sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" libixx/Cargo.toml
+
+          sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" Cargo.lock
+
+      - uses: cachix/install-nix-action@v30
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+        with:
+          diagnostic-endpoint: false
+          use-flakehub: false
+
+      - name: build ${{ matrix.module }}
+        run: nix build -L .#${{ matrix.module }} 
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.module }}
+          path: result
+
+  publish:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+ 
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: fixx
+          path: result
+
+      - uses: actions/setup-node@v4
+        with:
+          registry-url: https://npm.pkg.github.com
+
+      - run: npm publish --no-git-checks --access=public
+        working-directory: result/${{ matrix.module }}
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}

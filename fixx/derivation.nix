@@ -6,10 +6,11 @@ let
     hash = "sha256-prMIreQeAcbJ8/g3+pMp1Wp9H5u+xLqxRxL+34hICss=";
     cargoHash = "sha256-6iMebkD7FQvixlmghGGIvpdGwFNLfnUcFke/Rg8nPK4=";
   };
+  manifest = (lib.importTOML ./Cargo.toml).package;
 in
 rustPlatform.buildRustPackage rec {
   pname = "fixx";
-  version = "0.1.0";
+  inherit (manifest) version;
 
   src = lib.cleanSource ../.;
   cargoLock.lockFile = ../Cargo.lock;
@@ -23,7 +24,7 @@ rustPlatform.buildRustPackage rec {
 
   buildPhase = ''
     export HOME=$(mktemp -d)
-    (cd fixx && wasm-pack build --release --target web)
+    (cd fixx && wasm-pack build --release --target web --scope nuschtos)
   '';
 
   installPhase = ''
