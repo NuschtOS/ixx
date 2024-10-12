@@ -23,6 +23,11 @@
 
             RUST_SRC_PATH = pkgs.rust.packages.stable.rustPlatform.rustLibSrc;
           };
+
+          packages = {
+            ixx = pkgs.callPackage ./ixx/derivation.nix { };
+            fixx = pkgs.callPackage ./fixx/derivation.nix { };
+          };
         }
       );
 }

@@ -1,6 +1,7 @@
 use std::{
   collections::{hash_map::Entry, BTreeMap, HashMap},
   fs::File,
+  path::Path,
   sync::LazyLock,
 };
 
@@ -46,7 +47,7 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
 
   println!("Writing meta");
 
-  if !std::fs::exists("meta")? {
+  if !Path::new("meta").exists() {
     std::fs::create_dir("meta")?;
   }
 
