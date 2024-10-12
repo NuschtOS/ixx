@@ -1,12 +1,13 @@
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn hash(option: String) -> u8 {
-  libixx::hash(&option)
-}
+pub struct Index(libixx::Index);
 
 #[wasm_bindgen]
-pub struct Index(libixx::Index);
+pub struct SearchedOption {
+  idx: usize,
+  name: String,
+}
 
 #[wasm_bindgen]
 impl Index {
@@ -16,10 +17,37 @@ impl Index {
       .map_err(|err| format!("{:?}", err))
   }
 
-  pub fn search(&self, query: String, max_results: usize) -> Result<Vec<String>, String> {
+  pub fn search(&self, query: String, max_results: usize) -> Result<Vec<SearchedOption>, String> {
+    match self.0.search(&query, max_results) {
+      Ok(options) => Ok(
+        options
+          .into_iter()
+          .map(|(idx, name)| SearchedOption { idx, name })
+          .collect(),
+      ),
+      Err(err) => Err(format!("{:?}", err)),
+    }
+  }
+
+  pub fn all(&self, max: usize) -> Result<Vec<String>, String> {
+    self.0.all(max).map_err(|err| format!("{:?}", err))
+  }
+
+  pub fn get_idx_by_name(&self, name: String) -> Result<Option<usize>, String> {
     self
       .0
-      .search(&query, max_results)
+      .get_idx_by_name(&name)
       .map_err(|err| format!("{:?}", err))
+  }
+}
+
+#[wasm_bindgen]
+impl SearchedOption {
+  pub fn idx(&self) -> usize {
+    self.idx
+  }
+
+  pub fn name(self) -> String {
+    self.name
   }
 }

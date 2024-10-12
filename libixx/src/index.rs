@@ -4,25 +4,22 @@ use serde::{Deserialize, Serialize};
 
 use crate::IxxError;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Index(Vec<Vec<Label>>);
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct Reference {
   option_idx: u16,
   label_idx: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 enum Label {
   InPlace(String),
   Reference(Reference),
 }
-impl Index {
-  pub fn new() -> Self {
-    Self(Vec::new())
-  }
 
+impl Index {
   pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
     Ok(bincode::deserialize(buf)?)
   }
@@ -88,7 +85,41 @@ impl Index {
     }
   }
 
-  pub fn search(&self, query: &str, max_results: usize) -> Result<Vec<String>, IxxError> {
+  pub fn get_idx_by_name(&self, option: &str) -> Result<Option<usize>, IxxError> {
+    let mut labels = Vec::new();
+    for segment in option.split('.') {
+      'outer: {
+        for (option_idx, option) in self.0.iter().enumerate() {
+          for (label_idx, label) in option.iter().enumerate() {
+            if let Label::InPlace(inplace) = label {
+              if inplace != segment {
+                continue;
+              }
+
+              labels.push(Reference {
+                option_idx: option_idx as u16,
+                label_idx: label_idx as u8,
+              });
+              break 'outer;
+            }
+          }
+        }
+
+        return Ok(None);
+      }
+    }
+
+    Ok(
+      self
+        .0
+        .iter()
+        .enumerate()
+        .find(|(idx, option)| do_labels_match(*idx, option, &labels))
+        .map(|(idx, _)| idx),
+    )
+  }
+
+  pub fn search(&self, query: &str, max_results: usize) -> Result<Vec<(usize, String)>, IxxError> {
     let search = query
       .split('*')
       .map(|segment| segment.to_lowercase())
@@ -96,7 +127,7 @@ impl Index {
 
     let mut results = Vec::new();
 
-    for option in &self.0 {
+    for (idx, option) in self.0.iter().enumerate() {
       let mut option_name = String::new();
       for label in option {
         match label {
@@ -118,7 +149,7 @@ impl Index {
           }
         }
 
-        results.push(option_name);
+        results.push((idx, option_name));
         if results.len() >= max_results {
           return Ok(results);
         }
@@ -127,4 +158,41 @@ impl Index {
 
     Ok(results)
   }
+
+  pub fn all(&self, max: usize) -> Result<Vec<String>, IxxError> {
+    let mut options = Vec::new();
+
+    for option in &self.0[..max] {
+      let mut option_name = String::new();
+      for label in option {
+        match label {
+          Label::InPlace(data) => option_name.push_str(data),
+          Label::Reference(reference) => option_name.push_str(self.resolve_reference(reference)?),
+        }
+        option_name.push('.')
+      }
+      // remove last dot...
+      option_name.pop();
+
+      options.push(option_name);
+    }
+
+    Ok(options)
+  }
+}
+
+fn do_labels_match(option_idx: usize, option: &[Label], search: &[Reference]) -> bool {
+  let matching = option
+    .iter()
+    .enumerate()
+    .zip(search.iter())
+    .filter(|&((label_idx, option), search)| match option {
+      Label::InPlace(_) => {
+        option_idx == search.option_idx as usize && label_idx == search.label_idx as usize
+      }
+      Label::Reference(reference) => reference == search,
+    })
+    .count();
+
+  matching == option.len() && matching == search.len()
 }
