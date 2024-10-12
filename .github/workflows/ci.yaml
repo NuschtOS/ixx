@@ -32,7 +32,7 @@ jobs:
       - name: Set Cargo.toml version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" fixx/Cargo.toml          
+          sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" fixx/Cargo.toml
           sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" ixx/Cargo.toml
           sed -i'' "s/0\\.0\\.0-git/${{ steps.meta.outputs.version }}/" libixx/Cargo.toml
 
