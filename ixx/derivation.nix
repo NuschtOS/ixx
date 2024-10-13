@@ -12,4 +12,8 @@ rustPlatform.buildRustPackage rec {
 
   cargoBuildFlags = "-p ${pname}";
   cargoTestFlags = "-p ${pname}";
+
+  meta = {
+    mainProgram = "ixx";
+  };
 }
