@@ -40,4 +40,14 @@ fn test() {
     index.search("ho*en*Nix", 10).unwrap(),
     vec![(1usize, "home.enableNixpkgsReleaseCheck".to_string())]
   );
+
+  assert_eq!(
+    index.search("ho*en*Nix*Rel*Che", 10).unwrap(),
+    vec![(1usize, "home.enableNixpkgsReleaseCheck".to_string())]
+  );
+
+  assert_eq!(
+    index.search("enablenixpkgsreleasecheck", 10).unwrap(),
+    vec![(1usize, "home.enableNixpkgsReleaseCheck".to_string())]
+  );
 }
