@@ -125,6 +125,10 @@ impl Index {
       .map(|segment| segment.to_lowercase())
       .collect::<Vec<_>>();
 
+    if search.is_empty() {
+      return Ok(vec![]);
+    }
+
     let mut results = Vec::new();
 
     for (idx, option) in self.0.iter().enumerate() {
@@ -139,11 +143,13 @@ impl Index {
       // remove last dot...
       option_name.pop();
 
+      let lower_option_name = option_name.to_lowercase();
+
       let mut start = 0;
 
       'outer: {
         for segment in &search {
-          match option_name[start..].find(segment) {
+          match lower_option_name[start..].find(segment) {
             Some(idx) => start = idx + segment.len(),
             None => break 'outer,
           }
