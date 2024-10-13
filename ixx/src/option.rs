@@ -16,6 +16,7 @@ pub struct Option {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Declaration {
+  // TODO: is this optional?
   pub name: String,
   pub url: String,
 }
