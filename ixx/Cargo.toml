@@ -15,4 +15,5 @@ serde_json = "1.0"
 anyhow = "1.0"
 
 tree-sitter-highlight = "0.24"
-tree-sitter-nix = { git = "https://github.com/nix-community/tree-sitter-nix" }
+# when updating commit, also update HIGHLIGHT_NAMES in highlight.rs
+tree-sitter-nix = { git = "https://github.com/nix-community/tree-sitter-nix", rev = "456b14a2fa6315abc7e02fcffaf4a1f35d4955d3" }

@@ -13,10 +13,10 @@ rustPlatform.buildRustPackage rec {
   inherit (manifest) version;
 
   src = lib.cleanSource ../.;
-  cargoLock.lockFile = ../Cargo.lock;
+  cargoLock = import ../lockfile.nix;
 
   postPatch = ''
-     cp README.md LICENSE-{APACHE,MIT} fixx
+    cp README.md LICENSE-{APACHE,MIT} fixx
   '';
 
   nativeBuildInputs = [

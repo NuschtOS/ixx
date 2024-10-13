@@ -2,12 +2,10 @@ use std::{
   collections::{BTreeMap, HashMap},
   fs::File,
   path::{Path, PathBuf},
-  sync::LazyLock,
 };
 
 use libixx::Index;
 use serde::Deserialize;
-use tree_sitter_highlight::{Highlight, HighlightConfiguration, Highlighter, HtmlRenderer};
 use url::Url;
 
 use crate::{
@@ -75,15 +73,6 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
   Ok(())
 }
 
-impl From<option::Content> for String {
-  fn from(value: option::Content) -> Self {
-    match value {
-      option::Content::LiteralExpression { text } => code_highlighter(text.as_bytes()),
-      option::Content::Markdown { text } => markdown::to_html(&text),
-    }
-  }
-}
-
 fn into_option(name: &str, option: option::Option) -> libixx::Option {
   libixx::Option {
     declarations: option
@@ -91,9 +80,9 @@ fn into_option(name: &str, option: option::Option) -> libixx::Option {
       .into_iter()
       .map(update_declaration)
       .collect(),
-    default: option.default.map(|option| option.into()),
+    default: option.default.map(|option| option.render()),
     description: option.description,
-    example: option.example.map(|example| example.into()),
+    example: option.example.map(|example| example.render()),
     read_only: option.read_only,
     r#type: option.r#type,
     name: name.to_string(),
@@ -112,30 +101,4 @@ fn update_declaration(declaration: Declaration) -> String {
   // return declaration
 
   declaration.url
-}
-
-static CONFIG: LazyLock<HighlightConfiguration> = LazyLock::new(|| {
-  HighlightConfiguration::new(
-    tree_sitter_nix::language(),
-    "nix",
-    tree_sitter_nix::HIGHLIGHTS_QUERY,
-    "",
-    "",
-  )
-  .unwrap()
-});
-
-fn code_highlighter(code: &[u8]) -> String {
-  let mut highlighter = Highlighter::new();
-
-  let highlights = highlighter
-    .highlight(&CONFIG, code, None, |_| None)
-    .unwrap();
-
-  let mut renderer = HtmlRenderer::default();
-  renderer
-    .render(highlights, code, &|Highlight(_x)| "x".as_bytes())
-    .unwrap();
-
-  renderer.lines().collect()
 }

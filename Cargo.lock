@@ -435,7 +435,7 @@ checksum = "e8ddffe35a0e5eeeadf13ff7350af564c6e73993a24db62caee1822b185c2600"
 [[package]]
 name = "tree-sitter-nix"
 version = "0.0.1"
-source = "git+https://github.com/nix-community/tree-sitter-nix#456b14a2fa6315abc7e02fcffaf4a1f35d4955d3"
+source = "git+https://github.com/nix-community/tree-sitter-nix?rev=456b14a2fa6315abc7e02fcffaf4a1f35d4955d3#456b14a2fa6315abc7e02fcffaf4a1f35d4955d3"
 dependencies = [
  "cc",
  "tree-sitter",

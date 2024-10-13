@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::utils::highlight;
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Option {
@@ -32,4 +34,13 @@ pub enum Content {
   Markdown {
     text: String,
   },
+}
+
+impl Content {
+  pub(crate) fn render(self) -> String {
+    match self {
+      Self::LiteralExpression { text } => highlight(&text),
+      Self::Markdown { text } => markdown::to_html(&text),
+    }
+  }
 }
