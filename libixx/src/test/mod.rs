@@ -1,21 +1,53 @@
-use std::{collections::HashMap, fs::File};
-
 use crate::Index;
 
 #[test]
 fn test() {
-  let options: HashMap<String, crate::option::Option> =
-    serde_json::from_str(include_str!("./options.json")).unwrap();
-
-  let options = options.keys().collect::<Vec<_>>();
-
   let mut index = Index::default();
-  for option in &options {
-    index.push(option);
-  }
 
-  println!("{:?}", index.search("ho*exta", 10).unwrap());
+  index.push("home.enableDebugInfo");
+  index.push("home.enableNixpkgsReleaseCheck");
+  index.push("home.file.<name>.enable");
+  index.push("home.language.measurement");
+  index.push("home.pointerCursor.gtk.enable");
+  index.push("home.pointerCursor.x11.enable");
+  index.push("programs.home-manager.enable");
+  index.push("services.home-manager.autoUpgrade.enable");
+  index.push("services.home-manager.autoUpgrade.frequency");
 
-  let mut file = File::create("index.nuscht").unwrap();
-  index.write_into(&mut file).unwrap();
+  assert_eq!(
+    index.search("ho*auto", 10).unwrap(),
+    vec![
+      (
+        7usize,
+        "services.home-manager.autoUpgrade.enable".to_string()
+      ),
+      (
+        8usize,
+        "services.home-manager.autoUpgrade.frequency".to_string()
+      )
+    ]
+  );
+
+  assert_eq!(
+    index.search("ho*auto*ena", 10).unwrap(),
+    vec![(
+      7usize,
+      "services.home-manager.autoUpgrade.enable".to_string()
+    )]
+  );
+
+  assert_eq!(
+    index.search("ho*en*Nix", 10).unwrap(),
+    vec![(1usize, "home.enableNixpkgsReleaseCheck".to_string())]
+  );
+
+  assert_eq!(
+    index.search("ho*en*Nix*Rel*Che", 10).unwrap(),
+    vec![(1usize, "home.enableNixpkgsReleaseCheck".to_string())]
+  );
+
+  assert_eq!(
+    index.search("enablenixpkgsreleasecheck", 10).unwrap(),
+    vec![(1usize, "home.enableNixpkgsReleaseCheck".to_string())]
+  );
 }
