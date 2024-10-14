@@ -34,6 +34,9 @@ pub(super) struct SearchModule {
   #[clap(short, long, default_value = "index.ixx")]
   pub(super) index: PathBuf,
 
+  #[clap(short, long)]
+  pub(super) scope_id: Option<u8>,
+
   #[clap(short, long, default_value = "10")]
   pub(super) max_results: u32,
 }

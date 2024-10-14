@@ -1,3 +1,5 @@
+use std::string::FromUtf8Error;
+
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -21,8 +23,24 @@ impl Index {
     self.0.meta().chunk_size
   }
 
-  pub fn search(&self, query: String, max_results: usize) -> Result<Vec<SearchedOption>, String> {
-    match self.0.search(&query, max_results) {
+  pub fn scopes(&self) -> Result<Vec<String>, String> {
+    self
+      .0
+      .meta()
+      .scopes
+      .iter()
+      .map(|scope| String::try_from(scope.clone()))
+      .collect::<Result<Vec<String>, FromUtf8Error>>()
+      .map_err(|err| format!("{:?}", err))
+  }
+
+  pub fn search(
+    &self,
+    scope_id: Option<u8>,
+    query: String,
+    max_results: usize,
+  ) -> Result<Vec<SearchedOption>, String> {
+    match self.0.search(scope_id, &query, max_results) {
       Ok(options) => Ok(
         options
           .into_iter()
@@ -33,8 +51,11 @@ impl Index {
     }
   }
 
-  pub fn all(&self, max: usize) -> Result<Vec<String>, String> {
-    self.0.all(max).map_err(|err| format!("{:?}", err))
+  pub fn all(&self, scope_id: Option<u8>, max: usize) -> Result<Vec<String>, String> {
+    self
+      .0
+      .all(scope_id, max)
+      .map_err(|err| format!("{:?}", err))
   }
 
   pub fn get_idx_by_name(&self, name: String) -> Result<Option<usize>, String> {

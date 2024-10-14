@@ -23,13 +23,14 @@ pub(crate) struct Config {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Scope {
+  name: Option<String>,
   options_json: PathBuf,
   url_prefix: Url,
   options_prefix: Option<String>,
 }
 
 pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
-  let mut raw_options: BTreeMap<String, libixx::Option> = BTreeMap::new();
+  let mut raw_options: BTreeMap<String, (u8, libixx::Option)> = BTreeMap::new();
 
   let config_file = File::open(module.config)?;
   let config: Config = serde_json::from_reader(config_file)?;
@@ -40,6 +41,13 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
     println!("Parsing {}", scope.options_json.to_string_lossy());
     let file = File::open(scope.options_json)?;
     let options: HashMap<String, option::Option> = serde_json::from_reader(file)?;
+
+    let scope_idx = index.push_scope(
+      scope
+        .name
+        .map(|x| x.to_string())
+        .unwrap_or_else(|| scope.url_prefix.to_string()),
+    );
 
     for (name, option) in options {
       // internal options which cannot be hidden when importing existing options.json
@@ -52,13 +60,15 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
         None => name,
       };
       let option = into_option(&scope.url_prefix, &name, option)?;
-      raw_options.insert(name, option);
+      raw_options.insert(name.clone(), (scope_idx, option));
     }
   }
 
   println!("Read {} options", raw_options.len());
 
-  raw_options.keys().for_each(|name| index.push(name));
+  for (name, (scope_idx, _)) in &raw_options {
+    index.push(*scope_idx, name);
+  }
 
   println!("Writing index to {}", module.index_output.to_string_lossy());
 
@@ -71,7 +81,11 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
     std::fs::create_dir(&module.meta_output)?;
   }
 
-  let options: Vec<libixx::Option> = raw_options.into_values().collect();
+  let options = raw_options
+    .into_values()
+    .map(|(_, options)| options)
+    .collect::<Vec<_>>();
+
   for (idx, chunk) in options.chunks(module.chunk_size as usize).enumerate() {
     let mut file = File::create(module.meta_output.join(format!("{}.json", idx)))?;
     serde_json::to_writer(&mut file, &chunk)?;
