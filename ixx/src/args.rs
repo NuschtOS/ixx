@@ -18,7 +18,10 @@ pub(super) struct IndexModule {
   pub(super) config: PathBuf,
 
   #[clap(short, long, default_value = "index.ixx")]
-  pub(super) output: PathBuf,
+  pub(super) index_output: PathBuf,
+
+  #[clap(short, long, default_value = "meta")]
+  pub(crate) meta_output: PathBuf,
 
   #[clap(short, long, default_value = "100")]
   pub(super) chunk_size: usize,
