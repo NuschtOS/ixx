@@ -6,12 +6,19 @@ use crate::IxxError;
 
 #[binrw]
 #[brw(magic = b"ixx01")]
-#[derive(Default, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Index {
+  meta: Meta,
   #[bw(calc = entries.len() as u32)]
   count: u32,
   #[br(count = count)]
   entries: Vec<Entry>,
+}
+
+#[binrw]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Meta {
+  pub chunk_size: u32,
 }
 
 #[binrw]
@@ -40,6 +47,13 @@ enum Label {
 }
 
 impl Index {
+  pub fn new(chunk_size: u32) -> Self {
+    Self {
+      meta: Meta { chunk_size },
+      entries: vec![],
+    }
+  }
+
   pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
     Self::read_from(&mut Cursor::new(buf))
   }
@@ -210,6 +224,10 @@ impl Index {
     }
 
     Ok(options)
+  }
+
+  pub fn meta(&self) -> &Meta {
+    &self.meta
   }
 }
 

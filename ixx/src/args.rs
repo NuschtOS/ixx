@@ -24,7 +24,7 @@ pub(super) struct IndexModule {
   pub(crate) meta_output: PathBuf,
 
   #[clap(short, long, default_value = "100")]
-  pub(super) chunk_size: usize,
+  pub(super) chunk_size: u32,
 }
 
 #[derive(Parser)]

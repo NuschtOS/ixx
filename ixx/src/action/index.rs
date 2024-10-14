@@ -34,6 +34,8 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
   let config_file = File::open(module.config)?;
   let config: Config = serde_json::from_reader(config_file)?;
 
+  let mut index = Index::new(module.chunk_size);
+
   for scope in config.scopes {
     println!("Parsing {}", scope.options_json.to_string_lossy());
     let file = File::open(scope.options_json)?;
@@ -56,7 +58,6 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
 
   println!("Read {} options", raw_options.len());
 
-  let mut index = Index::default();
   raw_options.keys().for_each(|name| index.push(name));
 
   println!("Writing index to {}", module.index_output.to_string_lossy());
@@ -71,7 +72,7 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
   }
 
   let options: Vec<libixx::Option> = raw_options.into_values().collect();
-  for (idx, chunk) in options.chunks(module.chunk_size).enumerate() {
+  for (idx, chunk) in options.chunks(module.chunk_size as usize).enumerate() {
     let mut file = File::create(module.meta_output.join(format!("{}.json", idx)))?;
     serde_json::to_writer(&mut file, &chunk)?;
   }

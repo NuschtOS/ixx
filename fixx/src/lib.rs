@@ -17,6 +17,10 @@ impl Index {
       .map_err(|err| format!("{:?}", err))
   }
 
+  pub fn chunk_size(&self) -> u32 {
+    self.0.meta().chunk_size
+  }
+
   pub fn search(&self, query: String, max_results: usize) -> Result<Vec<SearchedOption>, String> {
     match self.0.search(&query, max_results) {
       Ok(options) => Ok(
