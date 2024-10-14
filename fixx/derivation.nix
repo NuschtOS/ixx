@@ -15,10 +15,6 @@ rustPlatform.buildRustPackage rec {
   src = lib.cleanSource ../.;
   cargoLock = import ../lockfile.nix;
 
-  postPatch = ''
-    cp README.md LICENSE-{APACHE,MIT} fixx
-  '';
-
   nativeBuildInputs = [
     binaryen
     rustc.llvmPackages.lld

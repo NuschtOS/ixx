@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        module: [ ixx, fixx ]
+        module: [ libixx, ixx, fixx ]
 
     steps:
       - uses: actions/checkout@v4
