@@ -4,7 +4,8 @@ use binrw::{binrw, BinRead, BinWrite, Endian, NullString};
 
 use crate::IxxError;
 
-#[binrw(magic = b"ixx01", little)]
+#[binrw]
+#[brw(magic = b"ixx01")]
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Index {
   #[bw(calc = entries.len() as u32)]
@@ -32,7 +33,9 @@ struct Reference {
 #[binrw]
 #[derive(Debug, Clone, PartialEq)]
 enum Label {
+  #[brw(magic = b"0")]
   InPlace(NullString),
+  #[brw(magic = b"1")]
   Reference(Reference),
 }
 
