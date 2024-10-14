@@ -39,6 +39,11 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
     let options: HashMap<String, option::Option> = serde_json::from_reader(file)?;
 
     for (name, option) in options {
+      // internal options which cannot be hidden when importing existing options.json
+      if name == "_module.args" {
+        continue;
+      }
+
       let name = match &scope.options_prefix {
         Some(prefix) => format!("{}.{}", prefix, name),
         None => name,
