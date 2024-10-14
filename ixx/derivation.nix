@@ -8,8 +8,12 @@ rustPlatform.buildRustPackage rec {
   inherit (manifest) version;
 
   src = lib.cleanSource ../.;
-  cargoLock.lockFile = ../Cargo.lock;
+  cargoLock = import ../lockfile.nix;
 
   cargoBuildFlags = "-p ${pname}";
   cargoTestFlags = "-p ${pname}";
+
+  meta = {
+    mainProgram = "ixx";
+  };
 }

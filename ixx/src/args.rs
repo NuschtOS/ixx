@@ -15,8 +15,7 @@ pub(super) enum Action {
 
 #[derive(Parser)]
 pub(super) struct IndexModule {
-  #[clap(required = true)]
-  pub(super) files: Vec<PathBuf>,
+  pub(super) config: PathBuf,
 
   #[clap(short, long, default_value = "index.ixx")]
   pub(super) output: PathBuf,

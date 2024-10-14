@@ -4,6 +4,7 @@ use clap::Parser;
 mod action;
 mod args;
 mod option;
+pub(crate) mod utils;
 
 fn main() -> anyhow::Result<()> {
   let args = Args::parse();
