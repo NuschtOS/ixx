@@ -1,3 +1,5 @@
+use std::string::FromUtf8Error;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -8,5 +10,7 @@ pub enum IxxError {
   RecursiveReference,
 
   #[error("(de)serialization failed")]
-  Bincode(#[from] bincode::Error),
+  Binrw(#[from] binrw::Error),
+  #[error("invalid utf8")]
+  FromUtf8Error(#[from] FromUtf8Error),
 }

@@ -1,49 +1,64 @@
-use std::io::{Read, Write};
+use std::io::{Cursor, Read, Seek, Write};
 
-use serde::{Deserialize, Serialize};
+use binrw::{binrw, BinRead, BinWrite, Endian, NullString};
 
 use crate::IxxError;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Index(Vec<Vec<Label>>);
+#[binrw(magic = b"ixx01", little)]
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct Index {
+  #[bw(calc = entries.len() as u32)]
+  count: u32,
+  #[br(count = count)]
+  entries: Vec<Entry>,
+}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[binrw]
+#[derive(Default, Debug, Clone, PartialEq)]
+pub struct Entry {
+  #[bw(calc = labels.len() as u16)]
+  count: u16,
+  #[br(count = count)]
+  labels: Vec<Label>,
+}
+
+#[binrw]
+#[derive(Debug, Clone, PartialEq)]
 struct Reference {
   option_idx: u16,
   label_idx: u8,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[binrw]
+#[derive(Debug, Clone, PartialEq)]
 enum Label {
-  InPlace(String),
+  InPlace(NullString),
   Reference(Reference),
 }
 
 impl Index {
   pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
-    Ok(bincode::deserialize(buf)?)
+    Self::read_from(&mut Cursor::new(buf))
   }
 
-  pub fn read_from<R: Read>(read: &mut R) -> Result<Self, IxxError> {
-    Ok(bincode::deserialize_from(read)?)
+  pub fn read_from<R: Read + Seek>(read: &mut R) -> Result<Self, IxxError> {
+    Ok(BinRead::read_options(read, Endian::Little, ())?)
   }
 
-  pub fn write(&self) -> Result<Vec<u8>, IxxError> {
-    Ok(bincode::serialize(self)?)
-  }
-
-  pub fn write_into<W: Write>(&self, write: &mut W) -> Result<(), IxxError> {
-    Ok(bincode::serialize_into(write, self)?)
+  pub fn write_into<W: Write + Seek>(&self, write: &mut W) -> Result<(), IxxError> {
+    Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
   pub fn push(&mut self, option: &str) {
     let labels = option
       .split('.')
       .map(|segment| {
-        for (option_idx, option) in self.0.iter().enumerate() {
+        let segment = segment.into();
+
+        for (option_idx, Entry { labels: option }) in self.entries.iter().enumerate() {
           for (label_idx, label) in option.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
-              if inplace != segment {
+              if inplace != &segment {
                 continue;
               }
 
@@ -55,21 +70,21 @@ impl Index {
           }
         }
 
-        Label::InPlace(segment.to_string())
+        Label::InPlace(segment)
       })
       .collect();
 
-    self.0.push(labels);
+    self.entries.push(Entry { labels });
   }
 
-  fn resolve_reference(&self, reference: &Reference) -> Result<&str, IxxError> {
+  fn resolve_reference(&self, reference: &Reference) -> Result<&NullString, IxxError> {
     let option_idx = reference.option_idx as usize;
 
-    if self.0.len() <= option_idx {
+    if self.entries.len() <= option_idx {
       return Err(IxxError::ReferenceOutOfBounds);
     }
 
-    let entry = &self.0[option_idx];
+    let entry = &self.entries[option_idx].labels;
 
     let label_idx = reference.label_idx as usize;
 
@@ -88,11 +103,13 @@ impl Index {
   pub fn get_idx_by_name(&self, option: &str) -> Result<Option<usize>, IxxError> {
     let mut labels = Vec::new();
     for segment in option.split('.') {
+      let segment = segment.into();
+
       'outer: {
-        for (option_idx, option) in self.0.iter().enumerate() {
+        for (option_idx, Entry { labels: option }) in self.entries.iter().enumerate() {
           for (label_idx, label) in option.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
-              if inplace != segment {
+              if inplace != &segment {
                 continue;
               }
 
@@ -111,10 +128,10 @@ impl Index {
 
     Ok(
       self
-        .0
+        .entries
         .iter()
         .enumerate()
-        .find(|(idx, option)| do_labels_match(*idx, option, &labels))
+        .find(|(idx, Entry { labels: option })| do_labels_match(*idx, option, &labels))
         .map(|(idx, _)| idx),
     )
   }
@@ -131,13 +148,16 @@ impl Index {
 
     let mut results = Vec::new();
 
-    for (idx, option) in self.0.iter().enumerate() {
+    for (idx, Entry { labels: option }) in self.entries.iter().enumerate() {
       let mut option_name = String::new();
       for label in option {
-        match label {
-          Label::InPlace(data) => option_name.push_str(data),
-          Label::Reference(reference) => option_name.push_str(self.resolve_reference(reference)?),
-        }
+        option_name.push_str(&String::try_from(
+          match label {
+            Label::InPlace(data) => data,
+            Label::Reference(reference) => self.resolve_reference(reference)?,
+          }
+          .clone(),
+        )?);
         option_name.push('.')
       }
       // remove last dot...
@@ -168,13 +188,16 @@ impl Index {
   pub fn all(&self, max: usize) -> Result<Vec<String>, IxxError> {
     let mut options = Vec::new();
 
-    for option in &self.0[..max] {
+    for Entry { labels: option } in &self.entries[..max] {
       let mut option_name = String::new();
       for label in option {
-        match label {
-          Label::InPlace(data) => option_name.push_str(data),
-          Label::Reference(reference) => option_name.push_str(self.resolve_reference(reference)?),
-        }
+        option_name.push_str(&String::try_from(
+          match label {
+            Label::InPlace(data) => data,
+            Label::Reference(reference) => self.resolve_reference(reference)?,
+          }
+          .clone(),
+        )?);
         option_name.push('.')
       }
       // remove last dot...
