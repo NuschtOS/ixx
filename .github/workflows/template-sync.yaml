@@ -1,0 +1,24 @@
+name: "Sync template"
+on:
+  schedule:
+  - cron:  "0 0 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  repo-sync:
+    if: github.repository != 'NuschtOS/template'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
+      - uses: AndreasAugustin/actions-template-sync@v2
+        with:
+          # required to update github workflow files
+          github_token: ${{ secrets.GH_TOKEN_FOR_UPDATES }}
+          pr_commit_msg: Merge template changes
+          source_repo_path: NuschtOS/template
