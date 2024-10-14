@@ -27,6 +27,7 @@
           packages = {
             ixx = pkgs.callPackage ./ixx/derivation.nix { };
             fixx = pkgs.callPackage ./fixx/derivation.nix { };
+            libixx = pkgs.callPackage ./libixx/derivation.nix { };
           };
         }
       );
