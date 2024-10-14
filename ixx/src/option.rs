@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use crate::utils::highlight;
 
@@ -15,12 +16,15 @@ pub struct Option {
   pub related_packages: std::option::Option<String>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Declaration {
-  // TODO: is this optional?
-  pub name: String,
-  pub url: String,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", untagged)]
+pub enum Declaration {
+  /// Example Value: `/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source/modules/initrd.nix`
+  StorePath(String),
+  Url {
+    name: String,
+    url: Url,
+  },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

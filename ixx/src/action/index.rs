@@ -1,9 +1,10 @@
 use std::{
   collections::{BTreeMap, HashMap},
   fs::File,
-  path::{Path, PathBuf},
+  path::PathBuf,
 };
 
+use anyhow::anyhow;
 use libixx::Index;
 use serde::Deserialize;
 use url::Url;
@@ -23,7 +24,7 @@ pub(crate) struct Config {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Scope {
   options_json: PathBuf,
-  url_prefix: Option<Url>,
+  url_prefix: Url,
   options_prefix: Option<String>,
 }
 
@@ -48,7 +49,7 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
         Some(prefix) => format!("{}.{}", prefix, name),
         None => name,
       };
-      let option = into_option(&name, option);
+      let option = into_option(&scope.url_prefix, &name, option)?;
       raw_options.insert(name, option);
     }
   }
@@ -58,52 +59,114 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
   let mut index = Index::default();
   raw_options.keys().for_each(|name| index.push(name));
 
-  println!("Writing index to {}", module.output.to_string_lossy());
+  println!("Writing index to {}", module.index_output.to_string_lossy());
 
-  let mut output = File::create(module.output)?;
+  let mut output = File::create(module.index_output)?;
   index.write_into(&mut output)?;
 
-  println!("Writing meta");
+  println!("Writing meta to {}", module.meta_output.to_string_lossy());
 
-  if !Path::new("meta").exists() {
-    std::fs::create_dir("meta")?;
+  if !module.meta_output.exists() {
+    std::fs::create_dir(&module.meta_output)?;
   }
 
   let options: Vec<libixx::Option> = raw_options.into_values().collect();
   for (idx, chunk) in options.chunks(module.chunk_size).enumerate() {
-    let mut file = File::create(format!("meta/{}.json", idx))?;
+    let mut file = File::create(module.meta_output.join(format!("{}.json", idx)))?;
     serde_json::to_writer(&mut file, &chunk)?;
   }
 
   Ok(())
 }
 
-fn into_option(name: &str, option: option::Option) -> libixx::Option {
-  libixx::Option {
+fn into_option(
+  url_prefix: &Url,
+  name: &str,
+  option: option::Option,
+) -> anyhow::Result<libixx::Option> {
+  Ok(libixx::Option {
     declarations: option
       .declarations
       .into_iter()
-      .map(update_declaration)
-      .collect(),
+      .map(|declaration| update_declaration(url_prefix, declaration))
+      .collect::<anyhow::Result<_>>()?,
     default: option.default.map(|option| option.render()),
     description: option.description,
     example: option.example.map(|example| example.render()),
     read_only: option.read_only,
     r#type: option.r#type,
     name: name.to_string(),
+  })
+}
+
+fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Result<Url> {
+  match declaration {
+    Declaration::StorePath(path) => {
+      let idx = path
+        .match_indices('/')
+        .nth(3)
+        .ok_or_else(|| anyhow!("Invalid store path: {}", path))?
+        .0
+        // +1 to also remove the / itself, when we join it with a url, the path in the url would
+        // get removed if we won't remove it.
+        + 1;
+      Ok(url_prefix.join(path.split_at(idx).1)?)
+    }
+    Declaration::Url { name: _, url } => Ok(url),
   }
 }
 
-fn update_declaration(declaration: Declaration) -> String {
-  // NOTE: Is the url actually optional? If its true, this can be ignored.
-  //       Otherwise the fallback with building the url outself is required.
-  //
-  // if "url" in declaration:
-  //   return declaration["url"]
-  // if declaration.startswith("/nix/store/"):
-  //   # strip prefix: /nix/store/0a0mxyfmad6kaknkkr0ysraifws856i7-source
-  //   return f"{url}{declaration[51:]}"
-  // return declaration
+#[cfg(test)]
+mod test {
+  use url::Url;
 
-  declaration.url
+  use crate::{action::index::update_declaration, option::Declaration};
+
+  #[test]
+  fn test_update_declaration() {
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path").unwrap(),
+        Declaration::StorePath(
+          "/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source/modules/initrd.nix".to_string()
+        )
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/modules/initrd.nix").unwrap()
+    );
+
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path/").unwrap(),
+        Declaration::StorePath(
+          "/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source/modules/initrd.nix".to_string()
+        )
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/path/modules/initrd.nix").unwrap()
+    );
+
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path/").unwrap(),
+        Declaration::StorePath(
+          "/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source-idk/modules/initrd.nix".to_string()
+        )
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/path/modules/initrd.nix").unwrap()
+    );
+
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path").unwrap(),
+        Declaration::Url {
+          name: "idk".to_string(),
+          url: Url::parse("https://example.com/some/path").unwrap(),
+        }
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/path").unwrap()
+    );
+  }
 }
