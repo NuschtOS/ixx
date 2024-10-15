@@ -106,7 +106,7 @@ fn into_option(
       .map(|declaration| update_declaration(url_prefix, declaration))
       .collect::<anyhow::Result<_>>()?,
     default: option.default.map(|option| option.render()),
-    description: option.description,
+    description: markdown::to_html(&option.description),
     example: option.example.map(|example| example.render()),
     read_only: option.read_only,
     r#type: option.r#type,
