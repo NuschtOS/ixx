@@ -173,10 +173,6 @@ impl Index {
       .map(|segment| segment.to_lowercase())
       .collect::<Vec<_>>();
 
-    if search.is_empty() {
-      return Ok(vec![]);
-    }
-
     let mut results = Vec::new();
 
     for (
@@ -227,40 +223,6 @@ impl Index {
     }
 
     Ok(results)
-  }
-
-  pub fn all(&self, scope_id: Option<u8>, max: usize) -> Result<Vec<String>, IxxError> {
-    let mut options = Vec::new();
-
-    for OptionEntry {
-      scope_id: option_scope_id,
-      labels: option,
-    } in &self.options[..max]
-    {
-      if let Some(scope_id) = scope_id {
-        if *option_scope_id != scope_id {
-          continue;
-        }
-      }
-
-      let mut option_name = String::new();
-      for label in option {
-        option_name.push_str(&String::try_from(
-          match label {
-            Label::InPlace(data) => data,
-            Label::Reference(reference) => self.resolve_reference(reference)?,
-          }
-          .clone(),
-        )?);
-        option_name.push('.')
-      }
-      // remove last dot...
-      option_name.pop();
-
-      options.push(option_name);
-    }
-
-    Ok(options)
   }
 
   pub fn meta(&self) -> &Meta {

@@ -51,13 +51,6 @@ impl Index {
     }
   }
 
-  pub fn all(&self, scope_id: Option<u8>, max: usize) -> Result<Vec<String>, String> {
-    self
-      .0
-      .all(scope_id, max)
-      .map_err(|err| format!("{:?}", err))
-  }
-
   pub fn get_idx_by_name(&self, name: String) -> Result<Option<usize>, String> {
     self
       .0
