@@ -4,18 +4,32 @@ use binrw::{binrw, BinRead, BinWrite, Endian, NullString};
 
 use crate::IxxError;
 
-#[binrw(magic = b"ixx01", little)]
-#[derive(Default, Debug, Clone, PartialEq)]
+#[binrw]
+#[brw(magic = b"ixx01")]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Index {
-  #[bw(calc = entries.len() as u32)]
+  meta: Meta,
+  #[bw(calc = options.len() as u32)]
   count: u32,
   #[br(count = count)]
-  entries: Vec<Entry>,
+  options: Vec<OptionEntry>,
+}
+
+#[binrw]
+#[derive(Debug, Clone, PartialEq)]
+pub struct Meta {
+  pub chunk_size: u32,
+  #[bw(calc = scopes.len() as u8)]
+  scope_count: u8,
+  #[br(count = scope_count)]
+  pub scopes: Vec<NullString>,
 }
 
 #[binrw]
 #[derive(Default, Debug, Clone, PartialEq)]
-pub struct Entry {
+pub struct OptionEntry {
+  /// index in the scopes Vec
+  scope_id: u8,
   #[bw(calc = labels.len() as u16)]
   count: u16,
   #[br(count = count)]
@@ -32,11 +46,23 @@ struct Reference {
 #[binrw]
 #[derive(Debug, Clone, PartialEq)]
 enum Label {
+  #[brw(magic = b"0")]
   InPlace(NullString),
+  #[brw(magic = b"1")]
   Reference(Reference),
 }
 
 impl Index {
+  pub fn new(chunk_size: u32) -> Self {
+    Self {
+      meta: Meta {
+        chunk_size,
+        scopes: vec![],
+      },
+      options: vec![],
+    }
+  }
+
   pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
     Self::read_from(&mut Cursor::new(buf))
   }
@@ -49,13 +75,13 @@ impl Index {
     Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
-  pub fn push(&mut self, option: &str) {
+  pub fn push(&mut self, scope_id: u8, option: &str) {
     let labels = option
       .split('.')
       .map(|segment| {
         let segment = segment.into();
 
-        for (option_idx, Entry { labels: option }) in self.entries.iter().enumerate() {
+        for (option_idx, OptionEntry { labels: option, .. }) in self.options.iter().enumerate() {
           for (label_idx, label) in option.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
               if inplace != &segment {
@@ -74,17 +100,17 @@ impl Index {
       })
       .collect();
 
-    self.entries.push(Entry { labels });
+    self.options.push(OptionEntry { scope_id, labels });
   }
 
   fn resolve_reference(&self, reference: &Reference) -> Result<&NullString, IxxError> {
     let option_idx = reference.option_idx as usize;
 
-    if self.entries.len() <= option_idx {
+    if self.options.len() <= option_idx {
       return Err(IxxError::ReferenceOutOfBounds);
     }
 
-    let entry = &self.entries[option_idx].labels;
+    let entry = &self.options[option_idx].labels;
 
     let label_idx = reference.label_idx as usize;
 
@@ -106,7 +132,7 @@ impl Index {
       let segment = segment.into();
 
       'outer: {
-        for (option_idx, Entry { labels: option }) in self.entries.iter().enumerate() {
+        for (option_idx, OptionEntry { labels: option, .. }) in self.options.iter().enumerate() {
           for (label_idx, label) in option.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
               if inplace != &segment {
@@ -128,27 +154,41 @@ impl Index {
 
     Ok(
       self
-        .entries
+        .options
         .iter()
         .enumerate()
-        .find(|(idx, Entry { labels: option })| do_labels_match(*idx, option, &labels))
+        .find(|(idx, OptionEntry { labels: option, .. })| do_labels_match(*idx, option, &labels))
         .map(|(idx, _)| idx),
     )
   }
 
-  pub fn search(&self, query: &str, max_results: usize) -> Result<Vec<(usize, String)>, IxxError> {
+  pub fn search(
+    &self,
+    scope_id: Option<u8>,
+    query: &str,
+    max_results: usize,
+  ) -> Result<Vec<(usize, String)>, IxxError> {
     let search = query
       .split('*')
       .map(|segment| segment.to_lowercase())
       .collect::<Vec<_>>();
 
-    if search.is_empty() {
-      return Ok(vec![]);
-    }
-
     let mut results = Vec::new();
 
-    for (idx, Entry { labels: option }) in self.entries.iter().enumerate() {
+    for (
+      idx,
+      OptionEntry {
+        scope_id: option_scope_id,
+        labels: option,
+      },
+    ) in self.options.iter().enumerate()
+    {
+      if let Some(scope_id) = scope_id {
+        if *option_scope_id != scope_id {
+          continue;
+        }
+      }
+
       let mut option_name = String::new();
       for label in option {
         option_name.push_str(&String::try_from(
@@ -185,28 +225,18 @@ impl Index {
     Ok(results)
   }
 
-  pub fn all(&self, max: usize) -> Result<Vec<String>, IxxError> {
-    let mut options = Vec::new();
+  pub fn meta(&self) -> &Meta {
+    &self.meta
+  }
 
-    for Entry { labels: option } in &self.entries[..max] {
-      let mut option_name = String::new();
-      for label in option {
-        option_name.push_str(&String::try_from(
-          match label {
-            Label::InPlace(data) => data,
-            Label::Reference(reference) => self.resolve_reference(reference)?,
-          }
-          .clone(),
-        )?);
-        option_name.push('.')
-      }
-      // remove last dot...
-      option_name.pop();
-
-      options.push(option_name);
+  pub fn push_scope(&mut self, scope: String) -> u8 {
+    if self.meta.scopes.len() == u8::MAX.into() {
+      panic!("You reached the limit of 256 scopes. Please contact the developers for further assistance.");
     }
 
-    Ok(options)
+    let idx = self.meta.scopes.len();
+    self.meta.scopes.push(scope.into());
+    idx as u8
   }
 }
 
