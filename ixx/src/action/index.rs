@@ -115,7 +115,7 @@ fn into_option(
 }
 
 fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Result<Url> {
-  match declaration {
+  let mut url = match declaration {
     Declaration::StorePath(path) => {
       let idx = path
         .match_indices('/')
@@ -125,10 +125,26 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
         // +1 to also remove the / itself, when we join it with a url, the path in the url would
         // get removed if we won't remove it.
         + 1;
-      Ok(url_prefix.join(path.split_at(idx).1)?)
+      url_prefix.join(path.split_at(idx).1)?
     }
-    Declaration::Url { name: _, url } => Ok(url),
+    Declaration::Url { name: _, url } => url,
+  };
+
+  if !url.path().ends_with(".nix") {
+    if url.path().ends_with("/") {
+      url = url.join("default.nix")?;
+    } else {
+      url = url.join(&format!(
+        "{}/default.nix",
+        url
+          .path_segments()
+          .map(|segments| segments.last().unwrap_or(""))
+          .unwrap_or(""),
+      ))?;
+    }
   }
+
+  Ok(url)
 }
 
 #[cfg(test)]
@@ -181,7 +197,19 @@ mod test {
         }
       )
       .unwrap(),
-      Url::parse("https://example.com/some/path").unwrap()
+      Url::parse("https://example.com/some/path/default.nix").unwrap()
+    );
+
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path").unwrap(),
+        Declaration::Url {
+          name: "idk".to_string(),
+          url: Url::parse("https://example.com/some/path/").unwrap(),
+        }
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/path/default.nix").unwrap()
     );
   }
 }
