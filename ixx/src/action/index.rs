@@ -117,7 +117,8 @@ fn into_option(
 fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Result<Url> {
   let mut url = match declaration {
     Declaration::StorePath(path) => {
-      let idx = path
+      if path.starts_with("/") {
+        let idx = path
         .match_indices('/')
         .nth(3)
         .ok_or_else(|| anyhow!("Invalid store path: {}", path))?
@@ -125,7 +126,10 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
         // +1 to also remove the / itself, when we join it with a url, the path in the url would
         // get removed if we won't remove it.
         + 1;
-      url_prefix.join(path.split_at(idx).1)?
+        url_prefix.join(path.split_at(idx).1)?
+      } else {
+        url_prefix.join(&path)?
+      }
     }
     Declaration::Url { name: _, url } => url,
   };
@@ -188,6 +192,7 @@ mod test {
       Url::parse("https://example.com/some/path/modules/initrd.nix").unwrap()
     );
 
+    // Suffix default.nix if url is referencing folder
     assert_eq!(
       update_declaration(
         &Url::parse("https://example.com/some/path").unwrap(),
@@ -210,6 +215,16 @@ mod test {
       )
       .unwrap(),
       Url::parse("https://example.com/some/path/default.nix").unwrap()
+    );
+
+    // nixpkgs edge case
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path/").unwrap(),
+        Declaration::StorePath("nixos/hello/world.nix".to_string()),
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/path/nixos/hello/world.nix").unwrap()
     );
   }
 }
