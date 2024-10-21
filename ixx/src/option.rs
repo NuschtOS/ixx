@@ -43,8 +43,8 @@ pub enum Content {
 impl Content {
   pub(crate) fn render(self) -> String {
     match self {
-      Self::LiteralExpression { text } => highlight(&text),
-      Self::Markdown { text } => markdown::to_html(&text),
+      Self::LiteralExpression { text } => highlight(text.trim()),
+      Self::Markdown { text } => markdown::to_html(text.trim()),
     }
   }
 }
