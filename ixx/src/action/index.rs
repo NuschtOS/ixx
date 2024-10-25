@@ -1,8 +1,4 @@
-use std::{
-  collections::{BTreeMap, HashMap},
-  fs::File,
-  path::PathBuf,
-};
+use std::{collections::HashMap, fs::File, path::PathBuf};
 
 use anyhow::anyhow;
 use libixx::Index;
@@ -29,8 +25,14 @@ pub(crate) struct Scope {
   options_prefix: Option<String>,
 }
 
+struct Entry {
+  name: String,
+  scope: u8,
+  option: libixx::Option,
+}
+
 pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
-  let mut raw_options: BTreeMap<String, (u8, libixx::Option)> = BTreeMap::new();
+  let mut raw_options: Vec<Entry> = vec![];
 
   let config_file = File::open(module.config)?;
   let config: Config = serde_json::from_reader(config_file)?;
@@ -60,14 +62,22 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
         None => name,
       };
       let option = into_option(&scope.url_prefix, &name, option)?;
-      raw_options.insert(name.clone(), (scope_idx, option));
+      raw_options.push(Entry {
+        name,
+        scope: scope_idx,
+        option,
+      });
     }
   }
 
   println!("Read {} options", raw_options.len());
 
-  for (name, (scope_idx, _)) in &raw_options {
-    index.push(*scope_idx, name);
+  raw_options.sort_by(|a, b| a.name.cmp(&b.name));
+
+  println!("Sorted options");
+
+  for entry in &raw_options {
+    index.push(entry.scope, &entry.name);
   }
 
   println!("Writing index to {}", module.index_output.to_string_lossy());
@@ -82,13 +92,13 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
   }
 
   let options = raw_options
-    .into_values()
-    .map(|(_, options)| options)
+    .into_iter()
+    .map(|entry| entry.option)
     .collect::<Vec<_>>();
 
   for (idx, chunk) in options.chunks(module.chunk_size as usize).enumerate() {
     let mut file = File::create(module.meta_output.join(format!("{}.json", idx)))?;
-    serde_json::to_writer(&mut file, &chunk)?;
+    serde_json::to_writer(&mut file, chunk)?;
   }
 
   Ok(())

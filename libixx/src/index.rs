@@ -126,7 +126,7 @@ impl Index {
     }
   }
 
-  pub fn get_idx_by_name(&self, option: &str) -> Result<Option<usize>, IxxError> {
+  pub fn get_idx_by_name(&self, scope_id: u8, option: &str) -> Result<Option<usize>, IxxError> {
     let mut labels = Vec::new();
     for segment in option.split('.') {
       let segment = segment.into();
@@ -157,7 +157,15 @@ impl Index {
         .options
         .iter()
         .enumerate()
-        .find(|(idx, OptionEntry { labels: option, .. })| do_labels_match(*idx, option, &labels))
+        .find(
+          |(
+            idx,
+            OptionEntry {
+              scope_id: option_scope_id,
+              labels: option,
+            },
+          )| *option_scope_id == scope_id && do_labels_match(*idx, option, &labels),
+        )
         .map(|(idx, _)| idx),
     )
   }
@@ -167,7 +175,7 @@ impl Index {
     scope_id: Option<u8>,
     query: &str,
     max_results: usize,
-  ) -> Result<Vec<(usize, String)>, IxxError> {
+  ) -> Result<Vec<(usize, u8, String)>, IxxError> {
     let search = query
       .split('*')
       .map(|segment| segment.to_lowercase())
@@ -215,7 +223,7 @@ impl Index {
           }
         }
 
-        results.push((idx, option_name));
+        results.push((idx, *option_scope_id, option_name));
         if results.len() >= max_results {
           return Ok(results);
         }

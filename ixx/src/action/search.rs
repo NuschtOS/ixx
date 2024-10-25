@@ -9,8 +9,8 @@ pub(crate) fn search(module: SearchModule) -> anyhow::Result<()> {
   let index = Index::read_from(&mut file)?;
 
   let result = index.search(module.scope_id, &module.query, module.max_results as usize)?;
-  for (idx, name) in result {
-    println!("idx: {}, name: {}", idx, name);
+  for (idx, scope_id, name) in result {
+    println!("idx: {}, scope_id: {}, name: {}", idx, scope_id, name);
   }
 
   Ok(())
