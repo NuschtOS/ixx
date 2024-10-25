@@ -16,6 +16,7 @@
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
               cargo
+              clippy
               rustc
               rustc.llvmPackages.lld
               wasm-pack
