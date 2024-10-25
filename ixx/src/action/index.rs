@@ -56,7 +56,7 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
       }
 
       let name = match &scope.options_prefix {
-        Some(prefix) => format!("{}.{}", prefix, name),
+        Some(prefix) => format!("{}{}", prefix, name),
         None => name,
       };
       let option = into_option(&scope.url_prefix, &name, option)?;
