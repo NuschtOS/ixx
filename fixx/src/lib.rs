@@ -8,6 +8,7 @@ pub struct Index(libixx::Index);
 #[wasm_bindgen]
 pub struct SearchedOption {
   idx: usize,
+  scope_id: u8,
   name: String,
 }
 
@@ -44,17 +45,21 @@ impl Index {
       Ok(options) => Ok(
         options
           .into_iter()
-          .map(|(idx, name)| SearchedOption { idx, name })
+          .map(|(idx, scope_id, name)| SearchedOption {
+            idx,
+            scope_id,
+            name,
+          })
           .collect(),
       ),
       Err(err) => Err(format!("{:?}", err)),
     }
   }
 
-  pub fn get_idx_by_name(&self, name: String) -> Result<Option<usize>, String> {
+  pub fn get_idx_by_name(&self, scope_id: u8, name: String) -> Result<Option<usize>, String> {
     self
       .0
-      .get_idx_by_name(&name)
+      .get_idx_by_name(scope_id, &name)
       .map_err(|err| format!("{:?}", err))
   }
 }
@@ -63,6 +68,10 @@ impl Index {
 impl SearchedOption {
   pub fn idx(&self) -> usize {
     self.idx
+  }
+
+  pub fn scope_id(&self) -> u8 {
+    self.scope_id
   }
 
   pub fn name(self) -> String {
