@@ -1,12 +1,20 @@
 # ixx
 
+ixx is the search engine and index creation tool used by [NüschtOS Search](https://github.com/NuschtOS/search).
+
 ## Building fixx
 
 ```
 wasm-pack build --release fixx --target web
 ```
 
-The result will be in fixx/pkg
+The result will be in `fixx/pkg`.
+
+## Contact
+
+For bugs and issues please open an issue in this repository.
+
+If you want to chat about things or have ideas, feel free to join the [Matrix Chat](https://matrix.to/#/#nuschtos:c3d2.de).
 
 ## License
 
