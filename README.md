@@ -1,6 +1,6 @@
 # ixx
 
-ixx is the search engine and index creation tool used by [NüschtOS search](https://github.com/NuschtOS/search).
+ixx is the search engine and index creation tool used by [NüschtOS Search](https://github.com/NuschtOS/search).
 
 ## Building fixx
 
