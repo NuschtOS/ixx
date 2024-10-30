@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -11,6 +11,13 @@ pub(super) struct Args {
 pub(super) enum Action {
   Index(IndexModule),
   Search(SearchModule),
+  Meta(MetaModule),
+}
+
+#[derive(ValueEnum, Clone)]
+pub(super) enum Format {
+  Text,
+  Json,
 }
 
 #[derive(Parser)]
@@ -39,4 +46,16 @@ pub(super) struct SearchModule {
 
   #[clap(short, long, default_value = "10")]
   pub(super) max_results: u32,
+
+  #[clap(short, long, default_value = "text")]
+  pub(super) format: Format,
+}
+
+#[derive(Parser)]
+pub(super) struct MetaModule {
+  #[clap(short, long, default_value = "index.ixx")]
+  pub(super) index: PathBuf,
+
+  #[clap(short, long, default_value = "text")]
+  pub(super) format: Format,
 }
