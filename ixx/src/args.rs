@@ -39,4 +39,7 @@ pub(super) struct SearchModule {
 
   #[clap(short, long, default_value = "10")]
   pub(super) max_results: u32,
+
+  #[clap(short, long, default_value = "false")]
+  pub(super) json: bool,
 }
