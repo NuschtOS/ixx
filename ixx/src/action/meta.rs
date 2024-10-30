@@ -2,7 +2,7 @@ use libixx::Index;
 use serde::Serialize;
 use std::fs::File;
 
-use crate::args::MetaModule;
+use crate::args::{Format, MetaModule};
 
 #[derive(Serialize)]
 struct Scope {
@@ -34,14 +34,17 @@ pub(crate) fn meta(module: MetaModule) -> anyhow::Result<()> {
       .collect(),
   };
 
-  if module.json {
-    let json_output = serde_json::to_string_pretty(&meta)?;
-    println!("{}", json_output);
-  } else {
-    println!("chunk_size: {}", meta.chunk_size);
-    println!("scopes:");
-    for scope in meta.scopes {
-      println!("  - id: {}, name: {}", scope.id, scope.name);
+  match module.format {
+    Format::Json => {
+      let json_output = serde_json::to_string_pretty(&meta)?;
+      println!("{}", json_output);
+    }
+    Format::Text => {
+      println!("chunk_size: {}", meta.chunk_size);
+      println!("scopes:");
+      for scope in meta.scopes {
+        println!("  - id: {}, name: {}", scope.id, scope.name);
+      }
     }
   }
 
