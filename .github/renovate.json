@@ -16,6 +16,10 @@
   "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
+      "matchManagers": ["cargo"],
+      "groupName": "crates"
+    },
+    {
       "matchManagers": ["nix"],
       "groupName": "flake inputs"
     }
