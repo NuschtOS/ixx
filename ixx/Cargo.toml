@@ -16,4 +16,4 @@ anyhow = "1.0"
 
 tree-sitter-highlight = "0.24"
 # when updating commit, also update HIGHLIGHT_NAMES in highlight.rs
-tree-sitter-nix = { git = "https://github.com/nix-community/tree-sitter-nix", rev = "456b14a2fa6315abc7e02fcffaf4a1f35d4955d3" }
+tree-sitter-nix = { git = "https://github.com/nix-community/tree-sitter-nix", rev = "0eca4c5cb06196cca6d9e81a64cb4b73bdab1c87" }
