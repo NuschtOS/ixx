@@ -36,7 +36,7 @@ static HIGHLIGHT_NAME_CLASSES: LazyLock<Vec<String>> = LazyLock::new(|| {
 
 static CONFIG: LazyLock<HighlightConfiguration> = LazyLock::new(|| {
   let mut config = HighlightConfiguration::new(
-    tree_sitter_nix::language(),
+    tree_sitter_nix::LANGUAGE.into(),
     "nix",
     tree_sitter_nix::HIGHLIGHTS_QUERY,
     "",
