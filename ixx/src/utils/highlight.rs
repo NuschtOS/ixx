@@ -58,8 +58,8 @@ pub(crate) fn highlight(code: &str) -> String {
 
   let mut renderer = HtmlRenderer::new();
   renderer
-    .render(highlight_event, code.as_bytes(), &|Highlight(idx)| {
-      HIGHLIGHT_NAME_CLASSES[idx].as_bytes()
+    .render(highlight_event, code.as_bytes(), &|Highlight(idx), out| {
+      out.extend(HIGHLIGHT_NAME_CLASSES[idx].as_bytes());
     })
     .expect("Failed to render HTML");
 
