@@ -14,6 +14,6 @@ markdown = "1.0.0-alpha.21"
 serde_json = "1.0"
 anyhow = "1.0"
 
-tree-sitter-highlight = "0.24"
+tree-sitter-highlight = "0.25"
 # when updating commit, also update HIGHLIGHT_NAMES in highlight.rs
 tree-sitter-nix = { git = "https://github.com/nix-community/tree-sitter-nix", rev = "4b952d99ce6fc795ff3cfa48b05637f2b1751d3b" }
