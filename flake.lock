@@ -24,7 +24,7 @@
         "narHash": "sha256-xvTo0Aw0+veek7hvEVLzErmJyQkEcRk6PSR4zsRQFEc=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "3a228057f5b619feb3186e986dbe76278d707b6e",
+        "rev": "68392b6bc4c42a2ee585e36b9ed26fd16400bb9f",
         "type": "github"
       },
       "original": {
