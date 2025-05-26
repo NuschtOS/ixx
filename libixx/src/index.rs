@@ -121,7 +121,7 @@ impl Index {
     let label = &entry[label_idx];
 
     match label {
-      Label::InPlace(ref string) => Ok(string),
+      Label::InPlace(string) => Ok(string),
       Label::Reference(_) => Err(IxxError::RecursiveReference),
     }
   }

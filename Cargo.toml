@@ -12,3 +12,4 @@ strip = true
 # https://docs.rust-embedded.org/book/unsorted/speed-vs-size.html#optimizing-dependencies
 [profile.release.package."*"]
 codegen-units = 1
+
