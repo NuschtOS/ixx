@@ -45,8 +45,8 @@ jobs:
 
       - uses: nix-community/cache-nix-action@v6
         with:
-          primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
-          restore-prefixes-first-match: nix-${{ runner.os }}-
+          primary-key: nix-${{ runner.os }}-${{ matrix.module }}-${{ matrix.target }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-${{ matrix.module }}-${{ matrix.target }}-
 
       - name: build stable ${{ matrix.module }}
         if: matrix.target != 'unstable'
