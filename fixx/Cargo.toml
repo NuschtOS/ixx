@@ -1,7 +1,7 @@
 [package]
 name = "fixx"
 version = "0.0.0-git"
-edition = "2021"
+edition = "2024"
 repository = "https://github.com/NuschtOS/ixx/"
 license = "MIT OR Apache-2.0"
 
@@ -11,3 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 libixx = { path = "../libixx" }
 wasm-bindgen = "0.2"
+
+# untill wasm-opt fixes it's stuff (caused by llvm update and new wasm features which was caused by rustc update)
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ['-O', '--enable-bulk-memory']

@@ -39,7 +39,7 @@ static CONFIG: LazyLock<HighlightConfiguration> = LazyLock::new(|| {
     tree_sitter_nix::LANGUAGE.into(),
     "nix",
     tree_sitter_nix::HIGHLIGHTS_QUERY,
-    "",
+    tree_sitter_nix::INJECTIONS_QUERY,
     "",
   )
   .unwrap();

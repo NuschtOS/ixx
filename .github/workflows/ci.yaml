@@ -15,8 +15,10 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         module: [ libixx, ixx, fixx ]
+        target: [ "25.05", "unstable" ]
 
     steps:
       - uses: actions/checkout@v4
@@ -46,10 +48,18 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
 
-      - name: build ${{ matrix.module }}
+      - name: build stable ${{ matrix.module }}
+        if: matrix.target != 'unstable'
+        run: |
+          nix build -L .#${{ matrix.module }} \
+            --override-input nixpkgs github:NixOS/nixpkgs/nixos-${{ matrix.target }}
+
+      - name: build unstable ${{ matrix.module }}
+        if: matrix.target == 'unstable'
         run: nix build -L .#${{ matrix.module }}
 
       - uses: actions/upload-artifact@v4
+        if: matrix.target != 'unstable'
         with:
           name: ${{ matrix.module }}
           path: result

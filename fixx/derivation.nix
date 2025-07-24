@@ -1,26 +1,12 @@
 { lib
-, buildWasmBindgenCli
 , rustPlatform
 , binaryen
-, fetchCrate
 , rustc
 , wasm-pack
+, wasm-bindgen-cli_0_2_100
 }:
 
 let
-  wasm-bindgen-100 = buildWasmBindgenCli rec {
-    src = fetchCrate {
-      pname = "wasm-bindgen-cli";
-      version = "0.2.100";
-      hash = "sha256-3RJzK7mkYFrs7C/WkhW9Rr4LdP5ofb2FdYGz1P7Uxog=";
-    };
-
-    cargoDeps = rustPlatform.fetchCargoVendor {
-      inherit src;
-      inherit (src) pname version;
-      hash = "sha256-qsO12332HSjWCVKtf1cUePWWb9IdYUmT+8OPj/XP2WE=";
-    };
-  };
   manifest = (lib.importTOML ./Cargo.toml).package;
 in
 rustPlatform.buildRustPackage rec {
@@ -28,13 +14,13 @@ rustPlatform.buildRustPackage rec {
   inherit (manifest) version;
 
   src = lib.cleanSource ../.;
-  cargoLock = import ../lockfile.nix;
+  cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = [
     binaryen
     rustc.llvmPackages.lld
     wasm-pack
-    wasm-bindgen-100
+    wasm-bindgen-cli_0_2_100
   ];
 
   buildPhase = ''
