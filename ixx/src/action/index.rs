@@ -57,6 +57,12 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
         continue;
       }
 
+      // skip modular services until upstream doc rendering is fixed
+      // https://github.com/NixOS/nixpkgs/issues/432550
+      if name.starts_with("<imports = [ pkgs.") {
+        continue;
+      }
+
       let name = match &scope.options_prefix {
         Some(prefix) => format!("{}.{}", prefix, name),
         None => name,
