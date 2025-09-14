@@ -77,7 +77,7 @@ jobs:
           name: fixx
           path: result
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           registry-url: https://registry.npmjs.org
 
