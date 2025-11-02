@@ -1,6 +1,6 @@
 use std::io::{Cursor, Read, Seek, Write};
 
-use binrw::{binrw, BinRead, BinWrite, Endian, NullString};
+use binrw::{BinRead, BinWrite, Endian, NullString, binrw};
 
 use crate::IxxError;
 
@@ -9,10 +9,10 @@ use crate::IxxError;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Index {
   meta: Meta,
-  #[bw(calc = options.len() as u32)]
+  #[bw(calc = entries.len() as u32)]
   count: u32,
   #[br(count = count)]
-  options: Vec<OptionEntry>,
+  entries: Vec<Entry>,
 }
 
 #[binrw]
@@ -27,7 +27,7 @@ pub struct Meta {
 
 #[binrw]
 #[derive(Default, Debug, Clone, PartialEq)]
-pub struct OptionEntry {
+pub struct Entry {
   /// index in the scopes Vec
   scope_id: u8,
   #[bw(calc = labels.len() as u16)]
@@ -39,7 +39,7 @@ pub struct OptionEntry {
 #[binrw]
 #[derive(Debug, Clone, PartialEq)]
 struct Reference {
-  option_idx: u16,
+  entry_idx: u16,
   label_idx: u8,
 }
 
@@ -59,7 +59,7 @@ impl Index {
         chunk_size,
         scopes: vec![],
       },
-      options: vec![],
+      entries: vec![],
     }
   }
 
@@ -75,21 +75,21 @@ impl Index {
     Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
-  pub fn push(&mut self, scope_id: u8, option: &str) {
-    let labels = option
+  pub fn push(&mut self, scope_id: u8, name: &str) {
+    let labels = name
       .split('.')
       .map(|segment| {
         let segment = segment.into();
 
-        for (option_idx, OptionEntry { labels: option, .. }) in self.options.iter().enumerate() {
-          for (label_idx, label) in option.iter().enumerate() {
+        for (entry_idx, Entry { labels, .. }) in self.entries.iter().enumerate() {
+          for (label_idx, label) in labels.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
               if inplace != &segment {
                 continue;
               }
 
               return Label::Reference(Reference {
-                option_idx: option_idx as u16,
+                entry_idx: entry_idx as u16,
                 label_idx: label_idx as u8,
               });
             }
@@ -100,17 +100,17 @@ impl Index {
       })
       .collect();
 
-    self.options.push(OptionEntry { scope_id, labels });
+    self.entries.push(Entry { scope_id, labels });
   }
 
   fn resolve_reference(&self, reference: &Reference) -> Result<&NullString, IxxError> {
-    let option_idx = reference.option_idx as usize;
+    let entry_idx = reference.entry_idx as usize;
 
-    if self.options.len() <= option_idx {
+    if self.entries.len() <= entry_idx {
       return Err(IxxError::ReferenceOutOfBounds);
     }
 
-    let entry = &self.options[option_idx].labels;
+    let entry = &self.entries[entry_idx].labels;
 
     let label_idx = reference.label_idx as usize;
 
@@ -126,21 +126,28 @@ impl Index {
     }
   }
 
-  pub fn get_idx_by_name(&self, scope_id: u8, option: &str) -> Result<Option<usize>, IxxError> {
+  pub fn get_idx_by_name(&self, scope_id: u8, name: &str) -> Result<Option<usize>, IxxError> {
     let mut labels = Vec::new();
-    for segment in option.split('.') {
+    for segment in name.split('.') {
       let segment = segment.into();
 
       'outer: {
-        for (option_idx, OptionEntry { labels: option, .. }) in self.options.iter().enumerate() {
-          for (label_idx, label) in option.iter().enumerate() {
+        for (
+          entry_idx,
+          Entry {
+            labels: inner_labels,
+            ..
+          },
+        ) in self.entries.iter().enumerate()
+        {
+          for (label_idx, label) in inner_labels.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
               if inplace != &segment {
                 continue;
               }
 
               labels.push(Reference {
-                option_idx: option_idx as u16,
+                entry_idx: entry_idx as u16,
                 label_idx: label_idx as u8,
               });
               break 'outer;
@@ -154,17 +161,17 @@ impl Index {
 
     Ok(
       self
-        .options
+        .entries
         .iter()
         .enumerate()
         .find(
           |(
             idx,
-            OptionEntry {
-              scope_id: option_scope_id,
-              labels: option,
+            Entry {
+              scope_id: entry_scope_id,
+              labels: inner_labels,
             },
-          )| *option_scope_id == scope_id && do_labels_match(*idx, option, &labels),
+          )| *entry_scope_id == scope_id && do_labels_match(*idx, inner_labels, &labels),
         )
         .map(|(idx, _)| idx),
     )
@@ -185,45 +192,45 @@ impl Index {
 
     for (
       idx,
-      OptionEntry {
-        scope_id: option_scope_id,
-        labels: option,
+      Entry {
+        scope_id: entry_scope_id,
+        labels,
       },
-    ) in self.options.iter().enumerate()
+    ) in self.entries.iter().enumerate()
     {
       if let Some(scope_id) = scope_id {
-        if *option_scope_id != scope_id {
+        if *entry_scope_id != scope_id {
           continue;
         }
       }
 
-      let mut option_name = String::new();
-      for label in option {
-        option_name.push_str(&String::try_from(
+      let mut entry_name = String::new();
+      for label in labels {
+        entry_name.push_str(&String::try_from(
           match label {
             Label::InPlace(data) => data,
             Label::Reference(reference) => self.resolve_reference(reference)?,
           }
           .clone(),
         )?);
-        option_name.push('.')
+        entry_name.push('.')
       }
       // remove last dot...
-      option_name.pop();
+      entry_name.pop();
 
-      let lower_option_name = option_name.to_lowercase();
+      let lower_entry_name = entry_name.to_lowercase();
 
       let mut start = 0;
 
       'outer: {
         for segment in &search {
-          match lower_option_name[start..].find(segment) {
+          match lower_entry_name[start..].find(segment) {
             Some(idx) => start = idx + segment.len(),
             None => break 'outer,
           }
         }
 
-        results.push((idx, *option_scope_id, option_name));
+        results.push((idx, *entry_scope_id, entry_name));
         if results.len() >= max_results {
           return Ok(results);
         }
@@ -239,7 +246,9 @@ impl Index {
 
   pub fn push_scope(&mut self, scope: String) -> u8 {
     if self.meta.scopes.len() == u8::MAX.into() {
-      panic!("You reached the limit of 256 scopes. Please contact the developers for further assistance.");
+      panic!(
+        "You reached the limit of 256 scopes. Please contact the developers for further assistance."
+      );
     }
 
     let idx = self.meta.scopes.len();
@@ -248,18 +257,18 @@ impl Index {
   }
 }
 
-fn do_labels_match(option_idx: usize, option: &[Label], search: &[Reference]) -> bool {
-  let matching = option
+fn do_labels_match(entry_idx: usize, labels: &[Label], search: &[Reference]) -> bool {
+  let matching = labels
     .iter()
     .enumerate()
     .zip(search.iter())
-    .filter(|&((label_idx, option), search)| match option {
+    .filter(|&((label_idx, entry), search)| match entry {
       Label::InPlace(_) => {
-        option_idx == search.option_idx as usize && label_idx == search.label_idx as usize
+        entry_idx == search.entry_idx as usize && label_idx == search.label_idx as usize
       }
       Label::Reference(reference) => reference == search,
     })
     .count();
 
-  matching == option.len() && matching == search.len()
+  matching == labels.len() && matching == search.len()
 }
