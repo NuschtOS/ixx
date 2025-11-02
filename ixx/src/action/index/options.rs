@@ -1,52 +1,39 @@
-use std::{collections::HashMap, fs::File, path::PathBuf};
+use std::{collections::HashMap, io::Cursor};
 
-use anyhow::anyhow;
+use anyhow::{Context, anyhow};
 use libixx::Index;
-use serde::Deserialize;
+use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
 use url::Url;
 
 use crate::{
+  action::index::{Config, OptionEntry},
   args::IndexModule,
   option::{self, Declaration},
 };
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct Config {
-  scopes: Vec<Scope>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct Scope {
-  name: Option<String>,
-  options_json: PathBuf,
-  url_prefix: Url,
-  options_prefix: Option<String>,
-}
-
-struct Entry {
-  name: String,
-  scope: u8,
-  option: libixx::Option,
-}
-
-pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
-  let mut raw_options: Vec<Entry> = vec![];
-
-  let config_file = File::open(module.config)?;
-  let config: Config = serde_json::from_reader(config_file)?;
+pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyhow::Result<()> {
+  let mut raw_options: Vec<OptionEntry> = vec![];
 
   let mut index = Index::new(module.chunk_size);
 
-  for scope in config.scopes {
+  for scope in &config.scopes {
     println!("Parsing {}", scope.options_json.to_string_lossy());
-    let file = File::open(scope.options_json)?;
-    let options: HashMap<String, option::Option> = serde_json::from_reader(file)?;
+    let options: HashMap<String, option::Option> = {
+      let raw_options = tokio::fs::read_to_string(&scope.options_json)
+        .await
+        .with_context(|| {
+          format!(
+            "Failed to read options json: {}",
+            scope.options_json.to_string_lossy()
+          )
+        })?;
+      serde_json::from_str(&raw_options)?
+    };
 
     let scope_idx = index.push_scope(
       scope
         .name
+        .as_ref()
         .map(|x| x.to_string())
         .unwrap_or_else(|| scope.url_prefix.to_string()),
     );
@@ -67,8 +54,10 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
         Some(prefix) => format!("{}.{}", prefix, name),
         None => name,
       };
+
       let option = into_option(&scope.url_prefix, &name, option)?;
-      raw_options.push(Entry {
+
+      raw_options.push(OptionEntry {
         name,
         scope: scope_idx,
         option,
@@ -82,19 +71,47 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
 
   println!("Sorted options");
 
+  println!("Building options index...");
   for entry in &raw_options {
     index.push(entry.scope, &entry.name);
   }
 
-  println!("Writing index to {}", module.index_output.to_string_lossy());
+  println!(
+    "Writing options index to {}",
+    module.options_index_output.to_string_lossy()
+  );
 
-  let mut output = File::create(module.index_output)?;
-  index.write_into(&mut output)?;
+  {
+    let index_buf = {
+      let mut buf = Vec::new();
+      index.write_into(&mut Cursor::new(&mut buf))?;
+      buf
+    };
 
-  println!("Writing meta to {}", module.meta_output.to_string_lossy());
+    let mut index_output = File::create(&module.options_index_output)
+      .await
+      .with_context(|| {
+        format!(
+          "Failed to create {}",
+          module.options_index_output.to_string_lossy()
+        )
+      })?;
 
-  if !module.meta_output.exists() {
-    std::fs::create_dir(&module.meta_output)?;
+    index_output.write_all(index_buf.as_slice()).await?;
+  }
+
+  println!(
+    "Writing meta to {}",
+    module.options_meta_output.to_string_lossy()
+  );
+
+  if !module.options_meta_output.exists() {
+    std::fs::create_dir(&module.options_meta_output).with_context(|| {
+      format!(
+        "Failed to create dir {}",
+        module.options_meta_output.to_string_lossy()
+      )
+    })?;
   }
 
   let options = raw_options
@@ -102,9 +119,27 @@ pub(crate) fn index(module: IndexModule) -> anyhow::Result<()> {
     .map(|entry| entry.option)
     .collect::<Vec<_>>();
 
+  let mut join_set = JoinSet::new();
+
   for (idx, chunk) in options.chunks(module.chunk_size as usize).enumerate() {
-    let mut file = File::create(module.meta_output.join(format!("{}.json", idx)))?;
-    serde_json::to_writer(&mut file, chunk)?;
+    let path = module.options_meta_output.join(format!("{}.json", idx));
+
+    let meta_string = serde_json::to_string(chunk)
+      .with_context(|| format!("Failed to write to {}", path.to_string_lossy()))?;
+
+    join_set.spawn(async move {
+      let mut file = File::create(&path)
+        .await
+        .with_context(|| format!("Failed to create {}", path.to_string_lossy()))?;
+
+      file.write_all(meta_string.as_bytes()).await?;
+
+      Ok::<_, anyhow::Error>(())
+    });
+  }
+
+  while let Some(result) = join_set.join_next().await {
+    result??;
   }
 
   Ok(())
@@ -171,7 +206,7 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
 mod test {
   use url::Url;
 
-  use crate::{action::index::update_declaration, option::Declaration};
+  use crate::{action::index::options::update_declaration, option::Declaration};
 
   #[test]
   fn test_update_declaration() {

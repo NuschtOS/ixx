@@ -24,13 +24,19 @@ pub(super) enum Format {
 pub(super) struct IndexModule {
   pub(super) config: PathBuf,
 
-  #[clap(short, long, default_value = "index.ixx")]
-  pub(super) index_output: PathBuf,
+  #[clap(long, default_value = "options/index.ixx")]
+  pub(super) options_index_output: PathBuf,
 
-  #[clap(short, long, default_value = "meta")]
-  pub(crate) meta_output: PathBuf,
+  #[clap(long, default_value = "options/meta")]
+  pub(crate) options_meta_output: PathBuf,
 
-  #[clap(short, long, default_value = "100")]
+  #[clap(long, default_value = "packages/index.ixx")]
+  pub(super) packages_index_output: PathBuf,
+
+  #[clap(long, default_value = "packages/meta")]
+  pub(crate) packages_meta_output: PathBuf,
+
+  #[clap(long, default_value = "100")]
   pub(super) chunk_size: u32,
 }
 

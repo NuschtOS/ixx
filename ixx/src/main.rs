@@ -4,13 +4,15 @@ use clap::Parser;
 mod action;
 mod args;
 mod option;
+mod package;
 pub(crate) mod utils;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
   let args = Args::parse();
 
   match args.action {
-    Action::Index(module) => action::index::index(module),
+    Action::Index(module) => action::index::index(module).await,
     Action::Search(module) => action::search::search(module),
     Action::Meta(module) => action::meta::meta(module),
   }?;
