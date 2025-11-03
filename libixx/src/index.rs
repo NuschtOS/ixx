@@ -76,29 +76,34 @@ impl Index {
   }
 
   pub fn push(&mut self, scope_id: u8, name: &str) {
-    let labels = name
-      .split('.')
-      .map(|segment| {
-        let segment = segment.into();
+    // optimize, if there is no dot in the name, compression does not make sense
+    let labels = if !name.contains('.') {
+      vec![Label::InPlace(name.into())]
+    } else {
+      name
+        .split('.')
+        .map(|segment| {
+          let segment = segment.into();
 
-        for (entry_idx, Entry { labels, .. }) in self.entries.iter().enumerate() {
-          for (label_idx, label) in labels.iter().enumerate() {
-            if let Label::InPlace(inplace) = label {
-              if inplace != &segment {
-                continue;
+          for (entry_idx, Entry { labels, .. }) in self.entries.iter().enumerate() {
+            for (label_idx, label) in labels.iter().enumerate() {
+              if let Label::InPlace(inplace) = label {
+                if inplace != &segment {
+                  continue;
+                }
+
+                return Label::Reference(Reference {
+                  entry_idx: entry_idx as u16,
+                  label_idx: label_idx as u8,
+                });
               }
-
-              return Label::Reference(Reference {
-                entry_idx: entry_idx as u16,
-                label_idx: label_idx as u8,
-              });
             }
           }
-        }
 
-        Label::InPlace(segment)
-      })
-      .collect();
+          Label::InPlace(segment)
+        })
+        .collect()
+    };
 
     self.entries.push(Entry { scope_id, labels });
   }
