@@ -17,14 +17,19 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   let mut index = Index::new(module.chunk_size);
 
   for scope in &config.scopes {
-    println!("Parsing {}", scope.options_json.to_string_lossy());
+    let options_json = match &scope.options_json {
+      Some(packages_jsons) => packages_jsons,
+      None => { continue; }
+    };
+
+    println!("Parsing {}", options_json.to_string_lossy());
     let options: HashMap<String, option::Option> = {
-      let raw_options = tokio::fs::read_to_string(&scope.options_json)
+      let raw_options = tokio::fs::read_to_string(&options_json)
         .await
         .with_context(|| {
           format!(
             "Failed to read options json: {}",
-            scope.options_json.to_string_lossy()
+            options_json.to_string_lossy()
           )
         })?;
       serde_json::from_str(&raw_options)?
@@ -66,6 +71,9 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   }
 
   println!("Read {} options", raw_options.len());
+  if raw_options.len() == 0 {
+    return Ok(());
+  }
 
   raw_options.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -101,7 +109,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   }
 
   println!(
-    "Writing meta to {}",
+    "Writing options meta to {}",
     module.options_meta_output.to_string_lossy()
   );
 

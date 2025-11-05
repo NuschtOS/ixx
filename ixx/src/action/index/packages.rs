@@ -16,6 +16,11 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   let mut index = Index::new(module.chunk_size);
 
   for scope in &config.scopes {
+    let packages_jsons = match &scope.packages_jsons {
+      Some(packages_jsons) => packages_jsons,
+      None => { continue; }
+    };
+
     let scope_idx = index.push_scope(
       scope
         .name
@@ -26,7 +31,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
 
     let mut join_set = JoinSet::new();
 
-    for packages_json in &scope.packages_jsons {
+    for packages_json in packages_jsons {
       let packages_json = packages_json.clone();
       join_set.spawn(async move {
         println!("Parsing {}", packages_json.to_string_lossy());
@@ -63,6 +68,9 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   }
 
   println!("Read {} packages", raw_packages.len());
+  if raw_packages.len() == 0 {
+    return Ok(());
+  }
 
   raw_packages.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -97,7 +105,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   }
 
   println!(
-    "write meta to {}",
+    "write packages meta to {}",
     module.packages_meta_output.to_string_lossy()
   );
 

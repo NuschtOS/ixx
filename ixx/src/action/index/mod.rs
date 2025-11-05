@@ -13,18 +13,18 @@ use crate::{
 mod options;
 mod packages;
 
-#[derive(Deserialize)]
+#[derive(Debug,Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Config {
   scopes: Vec<Scope>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug,Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Scope {
   name: Option<String>,
-  options_json: PathBuf,
-  packages_jsons: Vec<PathBuf>,
+  options_json: Option<PathBuf>,
+  packages_jsons: Option<Vec<PathBuf>>,
   url_prefix: Url,
   options_prefix: Option<String>,
 }
