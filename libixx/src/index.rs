@@ -151,6 +151,12 @@ impl Index {
                 continue;
               }
 
+              if entry_idx >= u16::MAX.into() {
+                panic!(
+                  "You can not reference names after index 65535. Please contact the developers for further assistance."
+                );
+              }
+
               labels.push(Reference {
                 entry_idx: entry_idx as u16,
                 label_idx: label_idx as u8,
