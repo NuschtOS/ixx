@@ -24,25 +24,41 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
         .unwrap_or_else(|| scope.url_prefix.to_string()),
     );
 
-    println!("Parsing {}", scope.packages_json.to_string_lossy());
-    let packages: Vec<package::Package> = {
-      let raw_packages = tokio::fs::read_to_string(&scope.packages_json)
-        .await
-        .with_context(|| {
-          format!(
-            "Failed to read options json: {}",
-            scope.options_json.to_string_lossy()
-          )
-        })?;
-      serde_json::from_str(&raw_packages)?
-    };
+    let mut join_set = JoinSet::new();
 
-    for package in packages {
-      raw_packages.push(PackageEntry {
-        name: package.attr_name.clone(),
-        scope: scope_idx,
-        option: into_package(package)?,
+    for packages_json in &scope.packages_jsons {
+      let packages_json = packages_json.clone();
+      join_set.spawn(async move {
+        println!("Parsing {}", packages_json.to_string_lossy());
+        let packages: Vec<package::Package> = {
+          let raw_packages = tokio::fs::read_to_string(&packages_json)
+            .await
+            .with_context(|| {
+              format!(
+                "Failed to read options json: {}",
+                packages_json.to_string_lossy()
+              )
+            })?;
+          serde_json::from_str(&raw_packages)?
+        };
+
+        let packages = packages
+          .into_iter()
+          .map(|package| {
+            Ok::<_, anyhow::Error>(PackageEntry {
+              name: package.attr_name.clone(),
+              scope: scope_idx,
+              option: into_package(package)?,
+            })
+          })
+          .collect::<Result<Vec<_>, _>>()?;
+
+        Ok::<_, anyhow::Error>(packages)
       });
+
+      while let Some(result) = join_set.join_next().await {
+        raw_packages.extend(result??);
+      }
     }
   }
 

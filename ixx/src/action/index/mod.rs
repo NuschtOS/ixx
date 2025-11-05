@@ -24,7 +24,7 @@ pub(crate) struct Config {
 pub(crate) struct Scope {
   name: Option<String>,
   options_json: PathBuf,
-  packages_json: PathBuf,
+  packages_jsons: Vec<PathBuf>,
   url_prefix: Url,
   options_prefix: Option<String>,
 }
