@@ -68,7 +68,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   }
 
   println!("Read {} packages", raw_packages.len());
-  if raw_packages.len() == 0 {
+  if raw_packages.is_empty() {
     return Ok(());
   }
 
@@ -160,7 +160,7 @@ fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
       Some(OneOrMany::One(homepage)) => vec![homepage],
       Some(OneOrMany::Many(homepages)) => homepages,
     },
-    outputs: package.outputs.unwrap_or_else(|| vec![]),
+    outputs: package.outputs.unwrap_or_default(),
     insecure: package.insecure,
     name: package.name,
     pname: package.pname,

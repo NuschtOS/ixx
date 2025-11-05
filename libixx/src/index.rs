@@ -209,11 +209,10 @@ impl Index {
       },
     ) in self.entries.iter().enumerate()
     {
-      if let Some(scope_id) = scope_id {
-        if *entry_scope_id != scope_id {
+      if let Some(scope_id) = scope_id
+        && *entry_scope_id != scope_id {
           continue;
         }
-      }
 
       let mut entry_name = String::new();
       for label in labels {

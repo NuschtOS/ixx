@@ -71,7 +71,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   }
 
   println!("Read {} options", raw_options.len());
-  if raw_options.len() == 0 {
+  if raw_options.is_empty() {
     return Ok(());
   }
 
@@ -201,7 +201,7 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
         "{}/default.nix",
         url
           .path_segments()
-          .map(|segments| segments.last().unwrap_or(""))
+          .map(|mut segments| segments.next_back().unwrap_or(""))
           .unwrap_or(""),
       ))?;
     }
