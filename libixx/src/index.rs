@@ -9,7 +9,7 @@ use crate::IxxError;
 
 pub struct IndexBuilder {
   index: Index,
-  label_cache: HashMap<Vec<u8>, u16>,
+  label_cache: HashMap<Vec<u8>, (u16, u8)>,
 }
 
 #[binrw]
@@ -81,24 +81,15 @@ impl IndexBuilder {
     } else {
       name
         .split('.')
-        .map(|segment| {
+        .enumerate()
+        .map(|(label_idx, segment)| {
           let segment: NullString = segment.into();
 
-          if let Some(entry_idx) = self.label_cache.get(segment.as_slice()) {
-            let Entry { labels, .. } = &self.index.entries[*entry_idx as usize];
-
-            for (label_idx, label) in labels.iter().enumerate() {
-              if let Label::InPlace(inplace) = label {
-                if inplace != &segment {
-                  continue;
-                }
-
-                return Label::Reference(Reference {
-                  entry_idx: *entry_idx,
-                  label_idx: label_idx as u8,
-                });
-              }
-            }
+          if let Some((entry_idx, label_idx)) = self.label_cache.get(segment.as_slice()) {
+            return Label::Reference(Reference {
+              entry_idx: *entry_idx,
+              label_idx: *label_idx,
+            });
           }
 
           if self.index.entries.len() == u16::MAX.into() {
@@ -109,7 +100,7 @@ impl IndexBuilder {
 
           self
             .label_cache
-            .insert(segment.to_vec(), self.index.entries.len() as u16);
+            .insert(segment.to_vec(), (self.index.entries.len() as u16, label_idx as u8));
 
           Label::InPlace(segment)
         })
