@@ -179,6 +179,7 @@ fn into_option(
 fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Result<Url> {
   let mut url = match declaration {
     Declaration::StorePath(path) => {
+      let mut url_path;
       if path.starts_with("/") {
         let idx = path
         .match_indices('/')
@@ -188,10 +189,16 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
         // +1 to also remove the / itself, when we join it with a url, the path in the url would
         // get removed if we won't remove it.
         + 1;
-        url_prefix.join(path.split_at(idx).1)?
+        url_path = path.split_at(idx).1.to_owned();
       } else {
-        url_prefix.join(&path)?
+        url_path = path
       }
+
+      if let Some((path, line)) = url_path.split_once(':') {
+        url_path = format!("{path}#L{line}");
+      }
+
+      url_prefix.join(&url_path)?
     }
     Declaration::Url { name: _, url } => url,
   };
@@ -252,6 +259,18 @@ mod test {
       )
       .unwrap(),
       Url::parse("https://example.com/some/path/modules/initrd.nix").unwrap()
+    );
+
+    // package position
+    assert_eq!(
+      update_declaration(
+        &Url::parse("https://example.com/some/path/").unwrap(),
+        Declaration::StorePath(
+          "/nix/store/pb93n2bk2zpyn1sqpkm3gyhra26zy4ps-source/pkgs/by-name/he/hello/package.nix:47".to_string()
+        )
+      )
+      .unwrap(),
+      Url::parse("https://example.com/some/path/pkgs/by-name/he/hello/package.nix#L47").unwrap()
     );
 
     // Suffix default.nix if url is referencing folder
