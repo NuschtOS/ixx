@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use anyhow::Context;
-use libixx::Index;
+use libixx::{Index, IndexBuilder};
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
 
 use crate::{
@@ -13,15 +13,17 @@ use crate::{
 pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> anyhow::Result<()> {
   let mut raw_packages: Vec<PackageEntry> = vec![];
 
-  let mut index = Index::new(module.chunk_size);
+  let mut index_builder = IndexBuilder::new(module.chunk_size);
 
   for scope in &config.scopes {
     let packages_jsons = match &scope.packages_jsons {
       Some(packages_jsons) => packages_jsons,
-      None => { continue; }
+      None => {
+        continue;
+      }
     };
 
-    let scope_idx = index.push_scope(
+    let scope_idx = index_builder.push_scope(
       scope
         .name
         .as_ref()
@@ -77,7 +79,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   println!("Sorted packages");
 
   for entry in &raw_packages {
-    index.push(entry.scope, &entry.name);
+    index_builder.push(entry.scope, &entry.name);
   }
 
   println!(
@@ -88,6 +90,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   {
     let index_buf = {
       let mut buf = Vec::new();
+      let index: Index = index_builder.into();
       index.write_into(&mut Cursor::new(&mut buf))?;
       buf
     };

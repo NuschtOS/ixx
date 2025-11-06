@@ -1,20 +1,22 @@
-use crate::Index;
+use crate::{Index, IndexBuilder};
 
 #[test]
 fn test() {
   // chunk_size does not really matter here currently
-  let mut index = Index::new(100);
+  let mut index_builder = IndexBuilder::new(100);
 
-  index.push(0, "home.enableDebugInfo");
-  index.push(0, "home.enableNixpkgsReleaseCheck");
-  index.push(0, "home.file.<name>.enable");
-  index.push(0, "home.language.measurement");
-  index.push(0, "home.pointerCursor.gtk.enable");
-  index.push(0, "home.pointerCursor.x11.enable");
-  index.push(0, "programs.home-manager.enable");
-  index.push(0, "services.home-manager.autoUpgrade.enable");
-  index.push(0, "services.home-manager.autoUpgrade.frequency");
-  index.push(1, "home.enableDebugInfo");
+  index_builder.push(0, "home.enableDebugInfo");
+  index_builder.push(0, "home.enableNixpkgsReleaseCheck");
+  index_builder.push(0, "home.file.<name>.enable");
+  index_builder.push(0, "home.language.measurement");
+  index_builder.push(0, "home.pointerCursor.gtk.enable");
+  index_builder.push(0, "home.pointerCursor.x11.enable");
+  index_builder.push(0, "programs.home-manager.enable");
+  index_builder.push(0, "services.home-manager.autoUpgrade.enable");
+  index_builder.push(0, "services.home-manager.autoUpgrade.frequency");
+  index_builder.push(1, "home.enableDebugInfo");
+
+  let index: Index = index_builder.into();
 
   assert_eq!(
     index.search(None, "ho*auto", 10).unwrap(),

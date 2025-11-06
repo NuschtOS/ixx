@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io::Cursor};
 
 use anyhow::{Context, anyhow};
-use libixx::Index;
+use libixx::{Index, IndexBuilder};
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
 use url::Url;
 
@@ -14,12 +14,14 @@ use crate::{
 pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyhow::Result<()> {
   let mut raw_options: Vec<OptionEntry> = vec![];
 
-  let mut index = Index::new(module.chunk_size);
+  let mut index_builder = IndexBuilder::new(module.chunk_size);
 
   for scope in &config.scopes {
     let options_json = match &scope.options_json {
       Some(packages_jsons) => packages_jsons,
-      None => { continue; }
+      None => {
+        continue;
+      }
     };
 
     println!("Parsing {}", options_json.to_string_lossy());
@@ -35,7 +37,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
       serde_json::from_str(&raw_options)?
     };
 
-    let scope_idx = index.push_scope(
+    let scope_idx = index_builder.push_scope(
       scope
         .name
         .as_ref()
@@ -81,7 +83,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
 
   println!("Building options index...");
   for entry in &raw_options {
-    index.push(entry.scope, &entry.name);
+    index_builder.push(entry.scope, &entry.name);
   }
 
   println!(
@@ -92,6 +94,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   {
     let index_buf = {
       let mut buf = Vec::new();
+      let index: Index = index_builder.into();
       index.write_into(&mut Cursor::new(&mut buf))?;
       buf
     };

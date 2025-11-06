@@ -13,13 +13,13 @@ use crate::{
 mod options;
 mod packages;
 
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Config {
   scopes: Vec<Scope>,
 }
 
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Scope {
   name: Option<String>,

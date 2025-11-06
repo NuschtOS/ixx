@@ -1,8 +1,16 @@
-use std::io::{Cursor, Read, Seek, Write};
+use std::{
+  collections::HashMap,
+  io::{Cursor, Read, Seek, Write},
+};
 
 use binrw::{BinRead, BinWrite, Endian, NullString, binrw};
 
 use crate::IxxError;
+
+pub struct IndexBuilder {
+  index: Index,
+  label_cache: HashMap<Vec<u8>, u16>,
+}
 
 #[binrw]
 #[brw(magic = b"ixx01")]
@@ -52,27 +60,18 @@ enum Label {
   Reference(Reference),
 }
 
-impl Index {
+impl IndexBuilder {
   pub fn new(chunk_size: u32) -> Self {
     Self {
-      meta: Meta {
-        chunk_size,
-        scopes: vec![],
+      index: Index {
+        meta: Meta {
+          chunk_size,
+          scopes: vec![],
+        },
+        entries: vec![],
       },
-      entries: vec![],
+      label_cache: HashMap::new(),
     }
-  }
-
-  pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
-    Self::read_from(&mut Cursor::new(buf))
-  }
-
-  pub fn read_from<R: Read + Seek>(read: &mut R) -> Result<Self, IxxError> {
-    Ok(BinRead::read_options(read, Endian::Little, ())?)
-  }
-
-  pub fn write_into<W: Write + Seek>(&self, write: &mut W) -> Result<(), IxxError> {
-    Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
   pub fn push(&mut self, scope_id: u8, name: &str) {
@@ -83,9 +82,11 @@ impl Index {
       name
         .split('.')
         .map(|segment| {
-          let segment = segment.into();
+          let segment: NullString = segment.into();
 
-          for (entry_idx, Entry { labels, .. }) in self.entries.iter().enumerate() {
+          if let Some(entry_idx) = self.label_cache.get(segment.as_slice()) {
+            let Entry { labels, .. } = &self.index.entries[*entry_idx as usize];
+
             for (label_idx, label) in labels.iter().enumerate() {
               if let Label::InPlace(inplace) = label {
                 if inplace != &segment {
@@ -93,19 +94,55 @@ impl Index {
                 }
 
                 return Label::Reference(Reference {
-                  entry_idx: entry_idx as u16,
+                  entry_idx: *entry_idx,
                   label_idx: label_idx as u8,
                 });
               }
             }
           }
 
+          if self.index.entries.len() == u16::MAX.into() {
+            panic!(
+              "You can not have more than 65535 entries. Please contact the developers for further assistance."
+            );
+          }
+
+          self
+            .label_cache
+            .insert(segment.to_vec(), self.index.entries.len() as u16);
+
           Label::InPlace(segment)
         })
         .collect()
     };
 
-    self.entries.push(Entry { scope_id, labels });
+    self.index.entries.push(Entry { scope_id, labels });
+  }
+
+  pub fn push_scope(&mut self, scope: String) -> u8 {
+    if self.index.meta.scopes.len() == u8::MAX.into() {
+      panic!(
+        "You reached the limit of 256 scopes. Please contact the developers for further assistance."
+      );
+    }
+
+    let idx = self.index.meta.scopes.len();
+    self.index.meta.scopes.push(scope.into());
+    idx as u8
+  }
+}
+
+impl Index {
+  pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
+    Self::read_from(&mut Cursor::new(buf))
+  }
+
+  pub fn read_from<R: Read + Seek>(read: &mut R) -> Result<Self, IxxError> {
+    Ok(BinRead::read_options(read, Endian::Little, ())?)
+  }
+
+  pub fn write_into<W: Write + Seek>(&self, write: &mut W) -> Result<(), IxxError> {
+    Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
   fn resolve_reference(&self, reference: &Reference) -> Result<&NullString, IxxError> {
@@ -149,12 +186,6 @@ impl Index {
             if let Label::InPlace(inplace) = label {
               if inplace != &segment {
                 continue;
-              }
-
-              if entry_idx >= u16::MAX.into() {
-                panic!(
-                  "You can not reference names after index 65535. Please contact the developers for further assistance."
-                );
               }
 
               labels.push(Reference {
@@ -210,9 +241,10 @@ impl Index {
     ) in self.entries.iter().enumerate()
     {
       if let Some(scope_id) = scope_id
-        && *entry_scope_id != scope_id {
-          continue;
-        }
+        && *entry_scope_id != scope_id
+      {
+        continue;
+      }
 
       let mut entry_name = String::new();
       for label in labels {
@@ -253,17 +285,11 @@ impl Index {
   pub fn meta(&self) -> &Meta {
     &self.meta
   }
+}
 
-  pub fn push_scope(&mut self, scope: String) -> u8 {
-    if self.meta.scopes.len() == u8::MAX.into() {
-      panic!(
-        "You reached the limit of 256 scopes. Please contact the developers for further assistance."
-      );
-    }
-
-    let idx = self.meta.scopes.len();
-    self.meta.scopes.push(scope.into());
-    idx as u8
+impl From<IndexBuilder> for Index {
+  fn from(value: IndexBuilder) -> Self {
+    value.index
   }
 }
 
