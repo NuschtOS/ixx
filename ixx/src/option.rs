@@ -4,6 +4,7 @@ use url::Url;
 use crate::utils::highlight;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 pub struct Option {
   pub declarations: Vec<Declaration>,
@@ -17,6 +18,7 @@ pub struct Option {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase", untagged)]
 pub enum Declaration {
   /// Example Value: `/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source/modules/initrd.nix`
@@ -28,6 +30,7 @@ pub enum Declaration {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 #[serde(tag = "_type")]
 pub enum Content {

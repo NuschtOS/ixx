@@ -2,6 +2,7 @@ use serde::Deserialize;
 use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 pub struct Package {
   pub attr_name: String,
@@ -18,6 +19,7 @@ pub struct Package {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
 #[serde(untagged)]
 pub enum OneOrMany<T> {
   One(T),
