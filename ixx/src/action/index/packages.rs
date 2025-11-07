@@ -157,6 +157,7 @@ fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
     attr_name: package.attr_name,
     eval_error: package.eval_error,
     broken: package.broken,
+    declaration: package.declaration,
     description: package.description,
     homepages: match package.homepage {
       None => vec![],
