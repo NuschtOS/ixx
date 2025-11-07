@@ -25,6 +25,8 @@ pub(crate) struct Config {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Scope {
   name: Option<String>,
+  license_mapping: Option<String>,
+  maintainer_mapping: Option<String>,
   options_json: Option<PathBuf>,
   packages_jsons: Option<Vec<PathBuf>>,
   url_prefix: Url,
