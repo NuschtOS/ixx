@@ -155,21 +155,22 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
 fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
   Ok(libixx::Package {
     attr_name: package.attr_name,
-    eval_error: package.eval_error,
     broken: package.broken,
     declaration: package.declaration,
     description: package.description,
+    eval_error: package.eval_error,
     homepages: match package.homepage {
       None => vec![],
       Some(OneOrMany::One(homepage)) => vec![homepage],
       Some(OneOrMany::Many(homepages)) => homepages,
     },
-    maintainers: package.maintainers.unwrap_or_default(),
-    licenses: package.licenses.unwrap_or_default(),
-    outputs: package.outputs.unwrap_or_default(),
     insecure: package.insecure,
+    licenses: package.licenses.unwrap_or_default(),
+    maintainers: package.maintainers.unwrap_or_default(),
     name: package.name,
+    outputs: package.outputs.unwrap_or_default(),
     pname: package.pname,
+    teams: package.teams,
     unfree: package.unfree,
     version: package.version,
   })

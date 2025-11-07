@@ -6,17 +6,18 @@ use url::Url;
 #[serde(rename_all = "camelCase")]
 pub struct Package {
   pub attr_name: String,
-  pub eval_error: Option<bool>,
   pub broken: Option<bool>,
   pub declaration: Option<String>,
   pub description: Option<String>,
+  pub eval_error: Option<bool>,
   pub homepage: Option<OneOrMany<Url>>,
-  pub maintainers: Option<Vec<String>>,
-  pub licenses: Option<Vec<String>>,
-  pub outputs: Option<Vec<String>>,
   pub insecure: Option<bool>,
+  pub licenses: Option<Vec<String>>,
+  pub maintainers: Option<Vec<String>>,
   pub name: Option<String>,
+  pub outputs: Option<Vec<String>>,
   pub pname: Option<String>,
+  pub teams: Option<String>,
   pub unfree: Option<bool>,
   pub version: Option<String>,
 }
