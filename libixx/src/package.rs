@@ -9,6 +9,7 @@ pub struct Package {
   pub declaration: Option<String>,
   pub description: Option<String>,
   pub homepages: Vec<Url>,
+  pub licenses: Vec<String>,
   pub outputs: Vec<String>,
   pub insecure: Option<bool>,
   pub name: Option<String>,
