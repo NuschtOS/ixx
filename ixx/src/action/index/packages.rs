@@ -171,7 +171,6 @@ fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
     outputs: package.outputs.unwrap_or_default(),
     pname: package.pname,
     teams: package.teams.unwrap_or_default(),
-    unfree: package.unfree,
     version: package.version,
   })
 }
