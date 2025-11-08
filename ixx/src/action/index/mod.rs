@@ -25,7 +25,7 @@ pub(crate) struct Config {
 pub(crate) struct Scope {
   name: Option<String>,
   license_mapping: HashMap<String, License>,
-  maintainer_mapping: HashMap<String, Maintainer>,
+  maintainer_mapping: HashMap<u32, Maintainer>,
   options_json: Option<PathBuf>,
   packages_jsons: Option<Vec<PathBuf>>,
   url_prefix: Url,
@@ -73,7 +73,7 @@ struct Meta {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct ScopeMeta {
   licenses: HashMap<String, License>,
-  maintainers: HashMap<String, Maintainer>,
+  maintainers: HashMap<u32, Maintainer>,
 }
 
 pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
