@@ -18,6 +18,7 @@ libixx = { path = "../libixx" }
 markdown = "1.0"
 serde_json = "1.0"
 anyhow = "1.0"
+regex = "1.12"
 
 tree-sitter-highlight = "0.25"
 # when updating commit, also update HIGHLIGHT_NAMES in highlight.rs

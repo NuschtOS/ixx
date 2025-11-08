@@ -1,7 +1,8 @@
-use std::io::Cursor;
+use std::{io::Cursor, sync::LazyLock};
 
 use anyhow::Context;
 use libixx::{Index, IndexBuilder};
+use regex::{Captures, Regex};
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
 
 use crate::{
@@ -153,6 +154,8 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
 }
 
 fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
+  static CVE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"CVE-(\d{4})-(\d+)").unwrap());
+
   Ok(libixx::Package {
     attr_name: package.attr_name,
     broken: package.broken,
@@ -164,7 +167,21 @@ fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
       Some(OneOrMany::One(homepage)) => vec![homepage],
       Some(OneOrMany::Many(homepages)) => homepages,
     },
-    known_vulnerabilities: package.known_vulnerabilities.unwrap_or_default(),
+    known_vulnerabilities: package
+      .known_vulnerabilities
+      .unwrap_or_default()
+      .into_iter()
+      .map(|vulnerability| {
+        CVE_REGEX
+          .replace_all(&vulnerability, |caps: &Captures| {
+            format!(
+              "<a href=\"https://www.cve.org/CVERecord?id=CVE-{0}-{1}\" target=\"_blank\">CVE-{0}-{1}</a>",
+              &caps[1], &caps[2]
+            )
+          })
+          .to_string()
+      })
+      .collect(),
     licenses: package.licenses.unwrap_or_default(),
     maintainers: package.maintainers.unwrap_or_default(),
     name: package.name,
