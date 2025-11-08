@@ -1,12 +1,16 @@
-use std::{io::Cursor, sync::LazyLock};
+use std::{
+  io::Cursor,
+  sync::{Arc, LazyLock},
+};
 
 use anyhow::Context;
 use libixx::{Index, IndexBuilder};
 use regex::{Captures, Regex};
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
+use url::Url;
 
 use crate::{
-  action::index::{Config, PackageEntry},
+  action::index::{Config, PackageEntry, update_declaration},
   args::IndexModule,
   package::{self, OneOrMany},
 };
@@ -34,8 +38,11 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
 
     let mut join_set = JoinSet::new();
 
+    let url_prefix = Arc::new(scope.url_prefix.clone());
+
     for packages_json in packages_jsons {
       let packages_json = packages_json.clone();
+      let url_prefix = url_prefix.clone();
       join_set.spawn(async move {
         println!("Parsing {}", packages_json.to_string_lossy());
         let packages: Vec<package::Package> = {
@@ -56,7 +63,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
             Ok::<_, anyhow::Error>(PackageEntry {
               name: package.attr_name.clone(),
               scope: scope_idx,
-              option: into_package(package)?,
+              option: into_package(&url_prefix, package)?,
             })
           })
           .collect::<Result<Vec<_>, _>>()?;
@@ -153,13 +160,13 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   Ok(())
 }
 
-fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
+fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<libixx::Package> {
   static CVE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"CVE-(\d{4})-(\d+)").unwrap());
 
   Ok(libixx::Package {
     attr_name: package.attr_name,
     broken: package.broken,
-    declaration: package.declaration,
+    declaration: package.declaration.map(|declaration | update_declaration(url_prefix, declaration)).transpose()?,
     description: package.description,
     eval_error: package.eval_error,
     homepages: match package.homepage {

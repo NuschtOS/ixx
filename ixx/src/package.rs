@@ -1,13 +1,15 @@
 use serde::Deserialize;
 use url::Url;
 
+use crate::Declaration;
+
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 pub struct Package {
   pub attr_name: String,
   pub broken: Option<bool>,
-  pub declaration: Option<String>,
+  pub declaration: Option<Declaration>,
   pub description: Option<String>,
   pub eval_error: Option<bool>,
   pub homepage: Option<OneOrMany<Url>>,

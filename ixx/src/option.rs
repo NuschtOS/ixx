@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use url::Url;
 
-use crate::utils::highlight;
+use crate::{Declaration, utils::highlight};
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[serde(rename_all = "camelCase")]
 pub struct Option {
@@ -15,18 +14,6 @@ pub struct Option {
   pub default: std::option::Option<Content>,
   pub example: std::option::Option<Content>,
   pub related_packages: std::option::Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "camelCase", untagged)]
-pub enum Declaration {
-  /// Example Value: `/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source/modules/initrd.nix`
-  StorePath(String),
-  Url {
-    name: String,
-    url: Url,
-  },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
