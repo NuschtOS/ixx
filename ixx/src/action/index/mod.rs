@@ -50,16 +50,17 @@ struct License {
   free: bool,
   full_name: String,
   redistributable: bool,
-  spdx_id: String,
-  url: Url,
+  spdx_id: Option<String>,
+  url: Option<Url>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Maintainer {
-  email: String,
+  email: Option<String>,
+  matrix: Option<String>,
   github: String,
-  github_id: u32,
+  github_id: Option<u32>,
   name: String,
 }
 
