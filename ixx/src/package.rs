@@ -11,7 +11,7 @@ pub struct Package {
   pub description: Option<String>,
   pub eval_error: Option<bool>,
   pub homepage: Option<OneOrMany<Url>>,
-  pub insecure: Option<bool>,
+  pub known_vulnerabilities: Option<Vec<String>>,
   pub licenses: Option<Vec<String>>,
   pub maintainers: Option<Vec<String>>,
   pub name: Option<String>,

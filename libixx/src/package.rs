@@ -9,7 +9,7 @@ pub struct Package {
   pub description: Option<String>,
   pub eval_error: Option<bool>,
   pub homepages: Vec<Url>,
-  pub insecure: Option<bool>,
+  pub known_vulnerabilities: Vec<String>,
   pub licenses: Vec<String>,
   pub maintainers: Vec<String>,
   pub name: Option<String>,

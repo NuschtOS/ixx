@@ -164,7 +164,7 @@ fn into_package(package: package::Package) -> anyhow::Result<libixx::Package> {
       Some(OneOrMany::One(homepage)) => vec![homepage],
       Some(OneOrMany::Many(homepages)) => homepages,
     },
-    insecure: package.insecure,
+    known_vulnerabilities: package.known_vulnerabilities.unwrap_or_default(),
     licenses: package.licenses.unwrap_or_default(),
     maintainers: package.maintainers.unwrap_or_default(),
     name: package.name,
