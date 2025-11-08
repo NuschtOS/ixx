@@ -15,15 +15,13 @@ mod options;
 mod packages;
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub(crate) struct Config {
   scopes: Vec<Scope>,
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub(crate) struct Scope {
   name: Option<String>,
   license_mapping: HashMap<String, License>,
@@ -47,7 +45,7 @@ struct PackageEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct License {
   free: bool,
   full_name: String,
@@ -57,7 +55,7 @@ struct License {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Maintainer {
   email: String,
   github: String,
@@ -66,11 +64,13 @@ struct Maintainer {
 }
 
 #[derive(Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Meta {
   scopes: HashMap<u8, ScopeMeta>,
 }
 
 #[derive(Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct ScopeMeta {
   licenses: HashMap<String, License>,
   maintainers: HashMap<String, Maintainer>,

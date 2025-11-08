@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Declaration, utils::highlight};
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Option {
   pub declarations: Vec<Declaration>,
   pub description: String,
@@ -17,8 +16,7 @@ pub struct Option {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 #[serde(tag = "_type")]
 pub enum Content {
   LiteralExpression {

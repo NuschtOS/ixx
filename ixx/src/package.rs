@@ -4,8 +4,7 @@ use url::Url;
 use crate::Declaration;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Package {
   pub attr_name: String,
   pub broken: Option<bool>,
@@ -24,7 +23,7 @@ pub struct Package {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 #[serde(untagged)]
 pub enum OneOrMany<T> {
   One(T),
