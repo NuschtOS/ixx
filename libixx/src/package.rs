@@ -15,7 +15,7 @@ pub struct Package {
   pub name: Option<String>,
   pub outputs: Vec<String>,
   pub pname: Option<String>,
-  pub teams: Option<String>,
+  pub teams: Vec<String>,
   pub unfree: Option<bool>,
   pub version: Option<String>,
 }
