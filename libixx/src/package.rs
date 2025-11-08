@@ -12,7 +12,7 @@ pub struct Package {
   pub homepages: Vec<Url>,
   pub known_vulnerabilities: Vec<String>,
   pub licenses: Vec<String>,
-  pub maintainers: Vec<String>,
+  pub maintainers: Vec<u32>,
   pub name: Option<String>,
   pub outputs: Vec<String>,
   pub pname: Option<String>,

@@ -14,7 +14,7 @@ pub struct Package {
   pub homepage: Option<OneOrMany<Url>>,
   pub known_vulnerabilities: Option<Vec<String>>,
   pub licenses: Option<Vec<String>>,
-  pub maintainers: Option<Vec<String>>,
+  pub maintainers: Option<Vec<u32>>,
   pub name: Option<String>,
   pub outputs: Option<Vec<String>>,
   pub pname: Option<String>,
