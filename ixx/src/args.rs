@@ -36,6 +36,9 @@ pub(super) struct IndexModule {
   #[clap(long, default_value = "packages/meta")]
   pub(crate) packages_meta_output: PathBuf,
 
+  #[clap(long, default_value = "meta.json")]
+  pub(crate) meta_output: PathBuf,
+
   #[clap(long, default_value = "100")]
   pub(super) chunk_size: u32,
 }

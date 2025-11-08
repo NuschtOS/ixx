@@ -1,8 +1,8 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
-use anyhow::{Context, anyhow};
-use serde::Deserialize;
-use tokio::join;
+use anyhow::Context;
+use serde::{Deserialize, Serialize};
+use tokio::{fs::File, io::AsyncWriteExt, join};
 use url::Url;
 
 use crate::{
@@ -26,8 +26,8 @@ pub(crate) struct Config {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Scope {
   name: Option<String>,
-  license_mapping: Option<String>,
-  maintainer_mapping: Option<String>,
+  license_mapping: HashMap<String, License>,
+  maintainer_mapping: HashMap<String, Maintainer>,
   options_json: Option<PathBuf>,
   packages_jsons: Option<Vec<PathBuf>>,
   url_prefix: Url,
@@ -46,6 +46,36 @@ struct PackageEntry {
   option: libixx::Package,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct License {
+  free: bool,
+  full_name: String,
+  redistributable: bool,
+  spdx_id: String,
+  url: Url,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Maintainer {
+  email: String,
+  github: String,
+  github_id: u32,
+  name: String,
+}
+
+#[derive(Serialize)]
+struct Meta {
+  scopes: HashMap<u8, ScopeMeta>,
+}
+
+#[derive(Serialize)]
+struct ScopeMeta {
+  licenses: HashMap<String, License>,
+  maintainers: HashMap<String, Maintainer>,
+}
+
 pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
   let config: Config = {
     let raw_config = tokio::fs::read_to_string(&module.config)
@@ -59,13 +89,39 @@ pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
     serde_json::from_str(&raw_config)?
   };
 
-  let (options_result, packages_result) = join!(
+  let (options_result, packages_result, meta_result) = join!(
     index_options(&module, &config),
     index_packages(&module, &config),
+    async {
+      let meta = Meta {
+        scopes: config
+          .scopes
+          .iter()
+          .enumerate()
+          .map(|(idx, scope)| {
+            (
+              idx as u8,
+              ScopeMeta {
+                licenses: scope.license_mapping.clone(),
+                maintainers: scope.maintainer_mapping.clone(),
+              },
+            )
+          })
+          .collect(),
+      };
+
+      let raw_meta = serde_json::to_string(&meta)?;
+      let mut meta_file = File::create(&module.meta_output).await?;
+
+      meta_file.write_all(raw_meta.as_bytes()).await?;
+
+      Ok::<_, anyhow::Error>(())
+    }
   );
 
   options_result?;
   packages_result?;
+  meta_result?;
 
   Ok(())
 }
@@ -78,7 +134,7 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
         let idx = path
         .match_indices('/')
         .nth(3)
-        .ok_or_else(|| anyhow!("Invalid store path: {}", path))?
+        .ok_or_else(|| anyhow::anyhow!("Invalid store path: {}", path))?
         .0
         // +1 to also remove the / itself, when we join it with a url, the path in the url would
         // get removed if we won't remove it.
