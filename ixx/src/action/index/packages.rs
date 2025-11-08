@@ -50,11 +50,16 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
             .await
             .with_context(|| {
               format!(
-                "Failed to read options json: {}",
+                "Failed to read packages json: {}",
                 packages_json.to_string_lossy()
               )
             })?;
-          serde_json::from_str(&raw_packages)?
+          serde_json::from_str(&raw_packages).with_context(|| {
+            format!(
+              "Failed to parse packages json: {}",
+              packages_json.to_string_lossy()
+            )
+          })?
         };
 
         let packages = packages

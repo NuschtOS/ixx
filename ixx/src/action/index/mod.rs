@@ -86,7 +86,12 @@ pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
           module.config.to_string_lossy()
         )
       })?;
-    serde_json::from_str(&raw_config)?
+    serde_json::from_str(&raw_config).with_context(|| {
+      format!(
+        "Failed to parse config file: {}",
+        module.config.to_string_lossy()
+      )
+    })?
   };
 
   let (options_result, packages_result, meta_result) = join!(

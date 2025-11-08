@@ -34,7 +34,12 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
             options_json.to_string_lossy()
           )
         })?;
-      serde_json::from_str(&raw_options)?
+      serde_json::from_str(&raw_options).with_context(|| {
+        format!(
+          "Failed to parse options json: {}",
+          options_json.to_string_lossy()
+        )
+      })?
     };
 
     let scope_idx = index_builder.push_scope(
