@@ -21,17 +21,17 @@ pub struct Option {
 pub enum Content {
   LiteralExpression {
     text: String,
+    // nixvim uses this in programs.nixvim.dependencies.coreutils.package
+    path: std::option::Option<Vec<String>>,
   },
   #[serde(rename = "literalMD")]
-  Markdown {
-    text: String,
-  },
+  Markdown { text: String },
 }
 
 impl Content {
   pub(crate) fn render(self) -> String {
     match self {
-      Self::LiteralExpression { text } => highlight(text.trim()),
+      Self::LiteralExpression { text, .. } => highlight(text.trim()),
       Self::Markdown { text } => markdown::to_html(text.trim()),
     }
   }
