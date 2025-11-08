@@ -60,7 +60,6 @@ struct Maintainer {
   email: Option<String>,
   matrix: Option<String>,
   github: String,
-  github_id: Option<u32>,
   name: String,
 }
 
