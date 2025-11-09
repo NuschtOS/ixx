@@ -92,7 +92,7 @@ impl IndexBuilder {
             });
           }
 
-          if self.index.entries.len() == u16::MAX.into() {
+          if self.index.entries.len() >= u16::MAX.into() {
             panic!(
               "You can not have more than 65535 entries. Please contact the developers for further assistance."
             );
