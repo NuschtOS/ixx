@@ -9,11 +9,11 @@ use crate::IxxError;
 
 pub struct IndexBuilder {
   index: Index,
-  label_cache: HashMap<Vec<u8>, (u16, u8)>,
+  label_cache: HashMap<Vec<u8>, (usize, u8)>,
 }
 
 #[binrw]
-#[brw(magic = b"ixx01")]
+#[brw(magic = b"ixx02")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Index {
   meta: Meta,
@@ -44,20 +44,96 @@ pub struct Entry {
   labels: Vec<Label>,
 }
 
-#[binrw]
 #[derive(Debug, Clone, PartialEq)]
 struct Reference {
-  entry_idx: u16,
+  entry_idx: u64,
   label_idx: u8,
 }
 
-#[binrw]
 #[derive(Debug, Clone, PartialEq)]
 enum Label {
-  #[brw(magic = b"0")]
   InPlace(NullString),
-  #[brw(magic = b"1")]
   Reference(Reference),
+}
+
+impl BinRead for Label {
+  type Args<'a> = ();
+
+  fn read_options<R: Read + Seek>(
+    reader: &mut R,
+    endian: Endian,
+    _args: Self::Args<'_>,
+  ) -> binrw::BinResult<Self> {
+    let first = u8::read_options(reader, endian, ())?;
+
+    if first & (1 << 7) == 0 {
+      return Ok(Self::InPlace(NullString::read_options(reader, endian, ())?));
+    }
+
+    let label_idx = first & (u8::MAX >> 3);
+
+    match (first & 0b01100000) >> 5 {
+      0 => Ok(Self::Reference(Reference {
+        entry_idx: u8::read_options(reader, endian, ())? as u64,
+        label_idx,
+      })),
+      1 => Ok(Self::Reference(Reference {
+        entry_idx: u16::read_options(reader, endian, ())? as u64,
+        label_idx,
+      })),
+      2 => Ok(Self::Reference(Reference {
+        entry_idx: u32::read_options(reader, endian, ())? as u64,
+        label_idx,
+      })),
+      3 => Ok(Self::Reference(Reference {
+        entry_idx: u16::read_options(reader, endian, ())? as u64,
+        label_idx,
+      })),
+      _ => unreachable!(),
+    }
+  }
+}
+
+impl BinWrite for Label {
+  type Args<'a> = ();
+
+  fn write_options<W: Write + Seek>(
+    &self,
+    writer: &mut W,
+    endian: Endian,
+    _args: Self::Args<'_>,
+  ) -> binrw::BinResult<()> {
+    match self {
+      Label::InPlace(null_string) => {
+        0u8.write_options(writer, endian, ())?;
+        null_string.write_options(writer, endian, ())?;
+      }
+      Label::Reference(Reference {
+        entry_idx,
+        label_idx,
+      }) => {
+        if *label_idx > (u8::MAX >> 3) {
+          panic!("Label index to big, contact developer!");
+        }
+
+        if *entry_idx < u8::MAX as u64 {
+          (1u8 & (0 << 5) & label_idx).write_options(writer, endian, ())?;
+          (*entry_idx as u8).write_options(writer, endian, ())?;
+        } else if *entry_idx < u16::MAX as u64 {
+          (1u8 & (1 << 5) & label_idx).write_options(writer, endian, ())?;
+          (*entry_idx as u16).write_options(writer, endian, ())?;
+        } else if *entry_idx < u32::MAX as u64 {
+          (1u8 & (2 << 5) & label_idx).write_options(writer, endian, ())?;
+          (*entry_idx as u32).write_options(writer, endian, ())?;
+        } else {
+          (1u8 & (3 << 5) & label_idx).write_options(writer, endian, ())?;
+          (*entry_idx as u64).write_options(writer, endian, ())?;
+        }
+      }
+    }
+
+    Ok(())
+  }
 }
 
 impl IndexBuilder {
@@ -87,20 +163,15 @@ impl IndexBuilder {
 
           if let Some((entry_idx, label_idx)) = self.label_cache.get(segment.as_slice()) {
             return Label::Reference(Reference {
-              entry_idx: *entry_idx,
+              entry_idx: *entry_idx as u64,
               label_idx: *label_idx,
             });
           }
 
-          if self.index.entries.len() >= u16::MAX.into() {
-            panic!(
-              "You can not have more than 65535 entries. Please contact the developers for further assistance."
-            );
-          }
-
-          self
-            .label_cache
-            .insert(segment.to_vec(), (self.index.entries.len() as u16, label_idx as u8));
+          self.label_cache.insert(
+            segment.to_vec(),
+            (self.index.entries.len(), label_idx as u8),
+          );
 
           Label::InPlace(segment)
         })
@@ -180,7 +251,7 @@ impl Index {
               }
 
               labels.push(Reference {
-                entry_idx: entry_idx as u16,
+                entry_idx: entry_idx as u64,
                 label_idx: label_idx as u8,
               });
               break 'outer;
