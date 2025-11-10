@@ -3,7 +3,7 @@
 , binaryen
 , rustc
 , wasm-pack
-, wasm-bindgen-cli_0_2_100
+, wasm-bindgen-cli_0_2_104
 }:
 
 let
@@ -20,7 +20,7 @@ rustPlatform.buildRustPackage rec {
     binaryen
     rustc.llvmPackages.lld
     wasm-pack
-    wasm-bindgen-cli_0_2_100
+    wasm-bindgen-cli_0_2_104
   ];
 
   buildPhase = ''
