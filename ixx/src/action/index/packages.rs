@@ -171,6 +171,8 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
   Ok(libixx::Package {
     attr_name: package.attr_name,
     broken: package.broken,
+    cpe: package.cpe,
+    possible_cpes: package.possible_cpes,
     declaration: package.declaration.map(|declaration | update_declaration(url_prefix, declaration)).transpose()?,
     description: package.description,
     eval_error: package.eval_error,

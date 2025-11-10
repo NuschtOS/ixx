@@ -8,6 +8,8 @@ use crate::Declaration;
 pub struct Package {
   pub attr_name: String,
   pub broken: Option<bool>,
+  pub cpe: Option<String>,
+  pub possible_cpes: Option<String>,
   pub declaration: Option<Declaration>,
   pub description: Option<String>,
   pub eval_error: Option<bool>,
