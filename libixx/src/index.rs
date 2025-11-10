@@ -38,8 +38,8 @@ pub struct Meta {
 pub struct Entry {
   /// index in the scopes Vec
   scope_id: u8,
-  #[bw(calc = labels.len() as u16)]
-  count: u16,
+  #[bw(calc = labels.len() as u8)]
+  count: u8,
   #[br(count = count)]
   labels: Vec<Label>,
 }
