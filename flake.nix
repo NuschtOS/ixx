@@ -18,6 +18,7 @@
             nativeBuildInputs = with pkgs; [
               cargo
               clippy
+              pnpm
               rustc
               rustc.llvmPackages.lld
               wasm-pack
