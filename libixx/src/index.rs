@@ -45,15 +45,15 @@ pub struct Entry {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Reference {
-  entry_idx: u64,
-  label_idx: u8,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 enum Label {
   InPlace(Vec<u8>),
   Reference(Reference),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct Reference {
+  entry_idx: u64,
+  label_idx: u8,
 }
 
 impl BinRead for Label {
