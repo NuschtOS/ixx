@@ -81,7 +81,7 @@ impl BinRead for Label {
 
     let label_idx = first & (u8::MAX >> 3);
 
-    match (first & 0b01100000) >> 5 {
+    match (first & 0b0110_0000) >> 5 {
       0 => Ok(Self::Reference(Reference {
         entry_idx: u8::read_options(reader, endian, ())? as u64,
         label_idx,
@@ -130,16 +130,16 @@ impl BinWrite for Label {
         }
 
         if *entry_idx < u8::MAX as u64 {
-          ((1u8 << 7) & (0 << 5) & label_idx).write_options(writer, endian, ())?;
+          ((1u8 << 7) | (0 << 5) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u8).write_options(writer, endian, ())?;
         } else if *entry_idx < u16::MAX as u64 {
-          ((1u8 << 7) & (1 << 5) & label_idx).write_options(writer, endian, ())?;
+          ((1u8 << 7) | (1 << 5) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u16).write_options(writer, endian, ())?;
         } else if *entry_idx < u32::MAX as u64 {
-          ((1u8 << 7) & (2 << 5) & label_idx).write_options(writer, endian, ())?;
+          ((1u8 << 7) | (2 << 5) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u32).write_options(writer, endian, ())?;
         } else {
-          ((1u8 << 7) & (3 << 5) & label_idx).write_options(writer, endian, ())?;
+          ((1u8 << 7) | (3 << 5) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u64).write_options(writer, endian, ())?;
         }
       }
