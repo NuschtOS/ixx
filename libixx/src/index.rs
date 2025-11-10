@@ -3,7 +3,7 @@ use std::{
   io::{Cursor, Read, Seek, Write},
 };
 
-use binrw::{BinRead, BinWrite, Endian, NullString, binrw};
+use binrw::{BinRead, BinWrite, Endian, NullString, VecArgs, binrw};
 
 use crate::IxxError;
 
@@ -52,7 +52,7 @@ struct Reference {
 
 #[derive(Debug, Clone, PartialEq)]
 enum Label {
-  InPlace(NullString),
+  InPlace(Vec<u8>),
   Reference(Reference),
 }
 
@@ -67,7 +67,16 @@ impl BinRead for Label {
     let first = u8::read_options(reader, endian, ())?;
 
     if first & (1 << 7) == 0 {
-      return Ok(Self::InPlace(NullString::read_options(reader, endian, ())?));
+      let buf = Vec::<u8>::read_options(
+        reader,
+        endian,
+        VecArgs {
+          count: first as usize,
+          inner: (),
+        },
+      )?;
+
+      return Ok(Self::InPlace(buf));
     }
 
     let label_idx = first & (u8::MAX >> 3);
@@ -104,9 +113,13 @@ impl BinWrite for Label {
     _args: Self::Args<'_>,
   ) -> binrw::BinResult<()> {
     match self {
-      Label::InPlace(null_string) => {
-        0u8.write_options(writer, endian, ())?;
-        null_string.write_options(writer, endian, ())?;
+      Label::InPlace(buf) => {
+        if buf.len() > (u8::MAX >> 1) as usize {
+          panic!("Label is to wide.");
+        }
+
+        (buf.len() as u8).write_options(writer, endian, ())?;
+        buf.write_options(writer, endian, ())?;
       }
       Label::Reference(Reference {
         entry_idx,
@@ -159,9 +172,9 @@ impl IndexBuilder {
         .split('.')
         .enumerate()
         .map(|(label_idx, segment)| {
-          let segment: NullString = segment.into();
+          let segment = segment.as_bytes();
 
-          if let Some((entry_idx, label_idx)) = self.label_cache.get(segment.as_slice()) {
+          if let Some((entry_idx, label_idx)) = self.label_cache.get(segment) {
             return Label::Reference(Reference {
               entry_idx: *entry_idx as u64,
               label_idx: *label_idx,
@@ -173,7 +186,7 @@ impl IndexBuilder {
             (self.index.entries.len(), label_idx as u8),
           );
 
-          Label::InPlace(segment)
+          Label::InPlace(segment.to_vec())
         })
         .collect()
     };
@@ -207,7 +220,7 @@ impl Index {
     Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
-  fn resolve_reference(&self, reference: &Reference) -> Result<&NullString, IxxError> {
+  fn resolve_reference(&self, reference: &Reference) -> Result<&[u8], IxxError> {
     let entry_idx = reference.entry_idx as usize;
 
     if self.entries.len() <= entry_idx {
@@ -233,7 +246,7 @@ impl Index {
   pub fn get_idx_by_name(&self, scope_id: u8, name: &str) -> Result<Option<usize>, IxxError> {
     let mut labels = Vec::new();
     for segment in name.split('.') {
-      let segment = segment.into();
+      let segment = segment.as_bytes();
 
       'outer: {
         for (
@@ -310,13 +323,10 @@ impl Index {
 
       let mut entry_name = String::new();
       for label in labels {
-        entry_name.push_str(&String::try_from(
-          match label {
-            Label::InPlace(data) => data,
-            Label::Reference(reference) => self.resolve_reference(reference)?,
-          }
-          .clone(),
-        )?);
+        entry_name.push_str(std::str::from_utf8(match label {
+          Label::InPlace(data) => data.as_slice(),
+          Label::Reference(reference) => self.resolve_reference(reference)?,
+        })?);
         entry_name.push('.')
       }
       // remove last dot...

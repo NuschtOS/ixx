@@ -1,4 +1,4 @@
-use std::string::FromUtf8Error;
+use std::str::Utf8Error;
 
 use thiserror::Error;
 
@@ -12,5 +12,5 @@ pub enum IxxError {
   #[error("(de)serialization failed")]
   Binrw(#[from] binrw::Error),
   #[error("invalid utf8")]
-  FromUtf8Error(#[from] FromUtf8Error),
+  FromUtf8Error(#[from] Utf8Error),
 }
