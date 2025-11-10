@@ -62,6 +62,10 @@ impl Index {
       .get_idx_by_name(scope_id, &name)
       .map_err(|err| format!("{:?}", err))
   }
+
+  pub fn size(&self) -> usize {
+    self.0.size()
+  }
 }
 
 #[wasm_bindgen]

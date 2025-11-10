@@ -347,6 +347,10 @@ impl Index {
   pub fn meta(&self) -> &Meta {
     &self.meta
   }
+
+  pub fn size(&self) -> usize {
+    self.entries.len()
+  }
 }
 
 impl From<IndexBuilder> for Index {
