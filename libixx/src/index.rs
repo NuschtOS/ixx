@@ -55,13 +55,13 @@ pub struct Entry {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum Label {
+pub enum Label {
   InPlace(Vec<u8>),
   Reference(Reference),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Reference {
+pub struct Reference {
   entry_idx: u64,
   label_idx: u8,
 }
@@ -246,7 +246,7 @@ impl Index {
     Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
-  fn resolve_reference(&self, reference: &Reference) -> Result<&[u8], IxxError> {
+  pub fn resolve_reference(&self, reference: &Reference) -> Result<&[u8], IxxError> {
     let entry_idx = reference.entry_idx as usize;
 
     if self.entries.len() <= entry_idx {
@@ -326,7 +326,7 @@ impl Index {
     query: &str,
     max_results: usize,
   ) -> Result<Vec<(usize, u8, String)>, IxxError> {
-    let search = query.split('*').collect::<Vec<_>>();
+    let search = query.split('*').map(|x| x.as_bytes()).collect::<Vec<_>>();
 
     let mut results = Vec::new();
 
@@ -344,19 +344,9 @@ impl Index {
         continue;
       }
 
-      let entry_name = labels
-        .iter()
-        .map(|label| {
-          Ok::<_, IxxError>(std::str::from_utf8(match label {
-            Label::InPlace(data) => data.as_slice(),
-            Label::Reference(reference) => self.resolve_reference(reference)?,
-          })?)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+      let entry_name = StringView::from((self, labels.as_slice()));
 
-      let entry_name = StringView::from(entry_name);
-
-      if entry_name.matches(&search) {
+      if entry_name.matches(&search)? {
         results.push((idx, *entry_scope_id, entry_name.to_string()));
         if results.len() == max_results {
           return Ok(results);
