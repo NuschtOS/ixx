@@ -1,11 +1,12 @@
 use std::{
   collections::HashMap,
   io::{Cursor, Read, Seek, Write},
+  string::FromUtf8Error,
 };
 
-use binrw::{BinRead, BinWrite, Endian, NullString, VecArgs, binrw};
+use binrw::{BinRead, BinWrite, Endian, VecArgs, binrw};
 
-use crate::IxxError;
+use crate::{IxxError, string_view::StringView};
 
 pub struct IndexBuilder {
   index: Index,
@@ -30,7 +31,16 @@ pub struct Meta {
   #[bw(calc = scopes.len() as u8)]
   scope_count: u8,
   #[br(count = scope_count)]
-  pub scopes: Vec<NullString>,
+  pub scopes: Vec<PascalString>,
+}
+
+#[binrw]
+#[derive(Debug, Clone, PartialEq)]
+pub struct PascalString {
+  #[bw(calc = data.len() as u8)]
+  len: u8,
+  #[br(count = len)]
+  data: Vec<u8>,
 }
 
 #[binrw]
@@ -95,7 +105,7 @@ impl BinRead for Label {
         label_idx,
       })),
       3 => Ok(Self::Reference(Reference {
-        entry_idx: u64::read_options(reader, endian, ())? as u64,
+        entry_idx: u64::read_options(reader, endian, ())?,
         label_idx,
       })),
       _ => unreachable!(),
@@ -140,12 +150,28 @@ impl BinWrite for Label {
           (*entry_idx as u32).write_options(writer, endian, ())?;
         } else {
           ((1u8 << 7) | (3 << 5) | label_idx).write_options(writer, endian, ())?;
-          (*entry_idx as u64).write_options(writer, endian, ())?;
+          entry_idx.write_options(writer, endian, ())?;
         }
       }
     }
 
     Ok(())
+  }
+}
+
+impl From<String> for PascalString {
+  fn from(value: String) -> Self {
+    Self {
+      data: value.into_bytes(),
+    }
+  }
+}
+
+impl TryFrom<PascalString> for String {
+  type Error = FromUtf8Error;
+
+  fn try_from(value: PascalString) -> Result<Self, Self::Error> {
+    String::from_utf8(value.data)
   }
 }
 
@@ -259,7 +285,7 @@ impl Index {
         {
           for (label_idx, label) in inner_labels.iter().enumerate() {
             if let Label::InPlace(inplace) = label {
-              if inplace != &segment {
+              if inplace != segment {
                 continue;
               }
 
@@ -300,10 +326,7 @@ impl Index {
     query: &str,
     max_results: usize,
   ) -> Result<Vec<(usize, u8, String)>, IxxError> {
-    let search = query
-      .split('*')
-      .map(|segment| segment.to_lowercase())
-      .collect::<Vec<_>>();
+    let search = query.split('*').collect::<Vec<_>>();
 
     let mut results = Vec::new();
 
@@ -321,31 +344,19 @@ impl Index {
         continue;
       }
 
-      let mut entry_name = String::new();
+      let mut entry_name = Vec::new();
       for label in labels {
-        entry_name.push_str(std::str::from_utf8(match label {
+        entry_name.push(std::str::from_utf8(match label {
           Label::InPlace(data) => data.as_slice(),
           Label::Reference(reference) => self.resolve_reference(reference)?,
         })?);
-        entry_name.push('.')
       }
-      // remove last dot...
-      entry_name.pop();
 
-      let lower_entry_name = entry_name.to_lowercase();
+      let entry_name = StringView::from(entry_name);
 
-      let mut start = 0;
-
-      'outer: {
-        for segment in &search {
-          match lower_entry_name[start..].find(segment) {
-            Some(idx) => start = idx + segment.len(),
-            None => break 'outer,
-          }
-        }
-
-        results.push((idx, *entry_scope_id, entry_name));
-        if results.len() >= max_results {
+      if entry_name.matches(&search) {
+        results.push((idx, *entry_scope_id, entry_name.to_string()));
+        if results.len() == max_results {
           return Ok(results);
         }
       }

@@ -7,6 +7,7 @@ mod error;
 mod index;
 mod option;
 mod package;
+mod string_view;
 
 #[cfg(test)]
 mod test;

@@ -27,11 +27,13 @@ pub(crate) fn meta(module: MetaModule) -> anyhow::Result<()> {
       .scopes
       .iter()
       .enumerate()
-      .map(|(i, scope)| Scope {
-        id: i as u8,
-        name: scope.to_string(),
+      .map(|(i, scope)| {
+        Ok::<_, anyhow::Error>(Scope {
+          id: i as u8,
+          name: scope.clone().try_into()?,
+        })
       })
-      .collect(),
+      .collect::<Result<Vec<_>, _>>()?,
   };
 
   match module.format {
