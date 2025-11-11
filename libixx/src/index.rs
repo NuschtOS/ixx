@@ -326,7 +326,12 @@ impl Index {
     query: &str,
     max_results: usize,
   ) -> Result<Vec<(usize, u8, String)>, IxxError> {
-    let search = query.split('*').map(|x| x.as_bytes()).collect::<Vec<_>>();
+    let search = query
+      .split('*')
+      .map(|x| x.as_bytes())
+      // * at the start or end of a string
+      .filter(|x| !x.is_empty())
+      .collect::<Vec<_>>();
 
     let mut results = Vec::new();
 
