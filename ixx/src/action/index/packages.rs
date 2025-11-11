@@ -167,6 +167,8 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
 
 fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<libixx::Package> {
   static CVE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"CVE-(\d{4})-(\d+)").unwrap());
+  static GHSA_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"GHSA(-[23456789cfghjmpqrvwx]{4}){3}").unwrap());
 
   Ok(libixx::Package {
     attr_name: package.attr_name,
@@ -174,7 +176,7 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
     cpe: package.cpe,
     possible_cpes: package.possible_cpes.unwrap_or_default(),
     declaration: package.declaration.map(|declaration | update_declaration(url_prefix, declaration)).transpose()?,
-    description: package.description,
+    description: package.description.map(|description| markdown::to_html(&description)),
     eval_error: package.eval_error,
     homepages: match package.homepage {
       None => vec![],
@@ -186,14 +188,22 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
       .unwrap_or_default()
       .into_iter()
       .map(|vulnerability| {
-        CVE_REGEX
+        let vulnerability = markdown::to_html(&vulnerability);
+      let vulnerability =         CVE_REGEX
           .replace_all(&vulnerability, |caps: &Captures| {
             format!(
               "<a href=\"https://www.cve.org/CVERecord?id=CVE-{0}-{1}\" target=\"_blank\">CVE-{0}-{1}</a>",
               &caps[1], &caps[2]
             )
-          })
-          .to_string()
+          });
+
+      GHSA_REGEX.replace_all(&vulnerability, |caps: &Captures|{
+          format!(
+              "<a href=\"https://github.com/advisories/GHSA{0}\" target=\"_blank\">GHSA-{0}</a>",
+              &caps[1]
+            )
+
+      }).to_string()
       })
       .collect(),
     licenses: package.licenses.unwrap_or_default(),
