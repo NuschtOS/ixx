@@ -344,13 +344,15 @@ impl Index {
         continue;
       }
 
-      let mut entry_name = Vec::new();
-      for label in labels {
-        entry_name.push(std::str::from_utf8(match label {
-          Label::InPlace(data) => data.as_slice(),
-          Label::Reference(reference) => self.resolve_reference(reference)?,
-        })?);
-      }
+      let entry_name = labels
+        .iter()
+        .map(|label| {
+          Ok::<_, IxxError>(std::str::from_utf8(match label {
+            Label::InPlace(data) => data.as_slice(),
+            Label::Reference(reference) => self.resolve_reference(reference)?,
+          })?)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
       let entry_name = StringView::from(entry_name);
 
