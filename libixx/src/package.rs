@@ -7,6 +7,7 @@ pub struct Package {
   pub attr_name: String,
   pub broken: Option<bool>,
   pub cpe: Option<String>,
+  pub disabled: Option<bool>,
   pub possible_cpes: Vec<String>,
   pub declaration: Option<Url>,
   pub description: Option<String>,
