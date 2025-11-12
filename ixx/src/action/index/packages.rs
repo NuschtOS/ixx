@@ -121,7 +121,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   }
 
   println!(
-    "write packages meta to {}",
+    "Writing packages meta to {}",
     module.packages_meta_output.to_string_lossy()
   );
 
