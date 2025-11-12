@@ -5,7 +5,6 @@ pub use package::Package;
 
 mod error;
 mod index;
-mod levenshtein;
 mod option;
 mod package;
 mod string_view;

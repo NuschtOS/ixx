@@ -6,9 +6,10 @@ use std::{
 
 use binrw::{BinRead, BinWrite, Endian, VecArgs, binrw};
 
+use levenshtein::levenshtein;
+
 use crate::{
   IxxError,
-  levenshtein::levenshtein,
   string_view::StringView,
 };
 
@@ -357,7 +358,7 @@ impl Index {
 
       if entry_name.matches(&search)? {
         let entry_name = entry_name.to_string();
-        let levenshtein = levenshtein(query.as_bytes(), entry_name.as_bytes());
+        let levenshtein = levenshtein(query, &entry_name);
 
         results.push((idx, *entry_scope_id, entry_name, levenshtein));
         if results.len() == max_results {
