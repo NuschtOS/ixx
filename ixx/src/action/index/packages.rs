@@ -87,9 +87,8 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
     return Ok(());
   }
 
+  println!("Sorting packages");
   raw_packages.sort_by(|a, b| a.name.cmp(&b.name));
-
-  println!("Sorted packages");
 
   for entry in &raw_packages {
     index_builder.push(entry.scope, &entry.name);

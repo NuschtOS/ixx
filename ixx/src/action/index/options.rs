@@ -82,11 +82,10 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
     return Ok(());
   }
 
+  println!("Sorting options");
   raw_options.sort_by(|a, b| a.name.cmp(&b.name));
 
-  println!("Sorted options");
-
-  println!("Building options index...");
+  println!("Building options index")
   for entry in &raw_options {
     index_builder.push(entry.scope, &entry.name);
   }
