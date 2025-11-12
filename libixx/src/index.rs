@@ -6,7 +6,11 @@ use std::{
 
 use binrw::{BinRead, BinWrite, Endian, VecArgs, binrw};
 
-use crate::{IxxError, string_view::StringView};
+use crate::{
+  IxxError,
+  levenshtein::{self, levenshtein},
+  string_view::StringView,
+};
 
 pub struct IndexBuilder {
   index: Index,
@@ -352,12 +356,22 @@ impl Index {
       let entry_name = StringView::from((self, labels.as_slice()));
 
       if entry_name.matches(&search)? {
-        results.push((idx, *entry_scope_id, entry_name.to_string()));
+        let entry_name = entry_name.to_string();
+        let levenshtein = levenshtein(query.as_bytes(), entry_name.as_bytes());
+
+        results.push((idx, *entry_scope_id, entry_name, levenshtein));
         if results.len() == max_results {
-          return Ok(results);
+          break;
         }
       }
     }
+
+    results.sort_by_key(|(_, _, _, levenshtein)| *levenshtein);
+
+    let results = results
+      .into_iter()
+      .map(|(idx, entry_scope_id, entry_name, _)| (idx, entry_scope_id, entry_name))
+      .collect();
 
     Ok(results)
   }
