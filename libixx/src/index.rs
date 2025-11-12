@@ -8,7 +8,7 @@ use binrw::{BinRead, BinWrite, Endian, VecArgs, binrw};
 
 use crate::{
   IxxError,
-  levenshtein::{self, levenshtein},
+  levenshtein::levenshtein,
   string_view::StringView,
 };
 
@@ -144,7 +144,7 @@ impl BinWrite for Label {
         }
 
         if *entry_idx < u8::MAX as u64 {
-          ((1u8 << 7) | (0 << 5) | label_idx).write_options(writer, endian, ())?;
+          ((1u8 << 7) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u8).write_options(writer, endian, ())?;
         } else if *entry_idx < u16::MAX as u64 {
           ((1u8 << 7) | (1 << 5) | label_idx).write_options(writer, endian, ())?;
