@@ -189,7 +189,7 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
       .into_iter()
       .map(|vulnerability| {
         let vulnerability = markdown::to_html(&vulnerability);
-      let vulnerability =         CVE_REGEX
+        let vulnerability = CVE_REGEX
           .replace_all(&vulnerability, |caps: &Captures| {
             format!(
               "<a href=\"https://www.cve.org/CVERecord?id=CVE-{0}-{1}\" target=\"_blank\">CVE-{0}-{1}</a>",
@@ -197,13 +197,12 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
             )
           });
 
-      GHSA_REGEX.replace_all(&vulnerability, |caps: &Captures|{
+        GHSA_REGEX.replace_all(&vulnerability, |caps: &Captures|{
           format!(
               "<a href=\"https://github.com/advisories/GHSA{0}\" target=\"_blank\">GHSA{0}</a>",
               &caps[1]
             )
-
-      }).to_string()
+        }).to_string()
       })
       .collect(),
     licenses: package.licenses.unwrap_or_default(),

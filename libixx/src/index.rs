@@ -130,7 +130,7 @@ impl BinWrite for Label {
     match self {
       Label::InPlace(buf) => {
         if buf.len() > (u8::MAX >> 1) as usize {
-          panic!("Label is to wide.");
+          panic!("Label is too wide.");
         }
 
         (buf.len() as u8).write_options(writer, endian, ())?;
@@ -141,7 +141,7 @@ impl BinWrite for Label {
         label_idx,
       }) => {
         if *label_idx > (u8::MAX >> 3) {
-          panic!("Label index to big, contact developer!");
+          panic!("Label index too big, contact developer!");
         }
 
         if *entry_idx < u8::MAX as u64 {
