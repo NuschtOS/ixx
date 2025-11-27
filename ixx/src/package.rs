@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use url::Url;
 
 use crate::Declaration;
 
@@ -14,7 +13,7 @@ pub struct Package {
   pub declaration: Option<Declaration>,
   pub description: Option<String>,
   pub eval_error: Option<bool>,
-  pub homepage: Option<OneOrMany<Url>>,
+  pub homepage: Option<OneOrMany<String>>,
   pub known_vulnerabilities: Option<Vec<String>>,
   pub licenses: Option<Vec<String>>,
   pub maintainers: Option<Vec<u32>>,
