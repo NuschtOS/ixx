@@ -39,7 +39,7 @@ pub(crate) fn meta(module: MetaModule) -> anyhow::Result<()> {
   match module.format {
     Format::Json => {
       let json_output = serde_json::to_string_pretty(&meta)?;
-      println!("{}", json_output);
+      println!("{json_output}");
     }
     Format::Text => {
       println!("chunk_size: {}", meta.chunk_size);

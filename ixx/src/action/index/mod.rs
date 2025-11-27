@@ -135,18 +135,18 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
   let mut url = match declaration {
     Declaration::StorePath(path) => {
       let mut url_path;
-      if path.starts_with("/") {
+      if path.starts_with('/') {
         let idx = path
         .match_indices('/')
         .nth(3)
-        .ok_or_else(|| anyhow::anyhow!("Invalid store path: {}", path))?
+        .ok_or_else(|| anyhow::anyhow!("Invalid store path: {path}"))?
         .0
         // +1 to also remove the / itself, when we join it with a url, the path in the url would
         // get removed if we won't remove it.
         + 1;
         url_path = path.split_at(idx).1.to_owned();
       } else {
-        url_path = path
+        url_path = path;
       }
 
       if let Some((path, line)) = url_path.split_once(':') {
@@ -159,15 +159,14 @@ fn update_declaration(url_prefix: &Url, declaration: Declaration) -> anyhow::Res
   };
 
   if !url.path().ends_with(".nix") {
-    if url.path().ends_with("/") {
+    if url.path().ends_with('/') {
       url = url.join("default.nix")?;
     } else {
       url = url.join(&format!(
         "{}/default.nix",
         url
           .path_segments()
-          .map(|mut segments| segments.next_back().unwrap_or(""))
-          .unwrap_or(""),
+          .map_or("", |mut segments| segments.next_back().unwrap_or("")),
       ))?;
     }
   }

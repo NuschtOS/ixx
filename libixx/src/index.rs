@@ -98,15 +98,15 @@ impl BinRead for Label {
 
     match (first & 0b0110_0000) >> 5 {
       0 => Ok(Self::Reference(Reference {
-        entry_idx: u8::read_options(reader, endian, ())? as u64,
+        entry_idx: u64::from(u8::read_options(reader, endian, ())?),
         label_idx,
       })),
       1 => Ok(Self::Reference(Reference {
-        entry_idx: u16::read_options(reader, endian, ())? as u64,
+        entry_idx: u64::from(u16::read_options(reader, endian, ())?),
         label_idx,
       })),
       2 => Ok(Self::Reference(Reference {
-        entry_idx: u32::read_options(reader, endian, ())? as u64,
+        entry_idx: u64::from(u32::read_options(reader, endian, ())?),
         label_idx,
       })),
       3 => Ok(Self::Reference(Reference {
@@ -129,9 +129,7 @@ impl BinWrite for Label {
   ) -> binrw::BinResult<()> {
     match self {
       Label::InPlace(buf) => {
-        if buf.len() > (u8::MAX >> 1) as usize {
-          panic!("Label is too wide.");
-        }
+        assert!(!(buf.len() > (u8::MAX >> 1) as usize), "Label is too wide.");
 
         (buf.len() as u8).write_options(writer, endian, ())?;
         buf.write_options(writer, endian, ())?;
@@ -140,17 +138,15 @@ impl BinWrite for Label {
         entry_idx,
         label_idx,
       }) => {
-        if *label_idx > (u8::MAX >> 3) {
-          panic!("Label index too big, contact developer!");
-        }
+        assert!(!(*label_idx > (u8::MAX >> 3)), "Label index too big, contact developer!");
 
-        if *entry_idx < u8::MAX as u64 {
+        if *entry_idx < u64::from(u8::MAX) {
           ((1u8 << 7) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u8).write_options(writer, endian, ())?;
-        } else if *entry_idx < u16::MAX as u64 {
+        } else if *entry_idx < u64::from(u16::MAX) {
           ((1u8 << 7) | (1 << 5) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u16).write_options(writer, endian, ())?;
-        } else if *entry_idx < u32::MAX as u64 {
+        } else if *entry_idx < u64::from(u32::MAX) {
           ((1u8 << 7) | (2 << 5) | label_idx).write_options(writer, endian, ())?;
           (*entry_idx as u32).write_options(writer, endian, ())?;
         } else {
@@ -181,7 +177,7 @@ impl TryFrom<PascalString> for String {
 }
 
 impl IndexBuilder {
-  pub fn new(chunk_size: u32) -> Self {
+  #[must_use] pub fn new(chunk_size: u32) -> Self {
     Self {
       index: Index {
         meta: Meta {
@@ -196,9 +192,7 @@ impl IndexBuilder {
 
   pub fn push(&mut self, scope_id: u8, name: &str) {
     // optimize, if there is no dot in the name, compression does not make sense
-    let labels = if !name.contains('.') {
-      vec![Label::InPlace(name.into())]
-    } else {
+    let labels = if name.contains('.') {
       name
         .split('.')
         .enumerate()
@@ -220,17 +214,17 @@ impl IndexBuilder {
           Label::InPlace(segment.to_vec())
         })
         .collect()
+    } else {
+      vec![Label::InPlace(name.into())]
     };
 
     self.index.entries.push(Entry { scope_id, labels });
   }
 
   pub fn push_scope(&mut self, scope: String) -> u8 {
-    if self.index.meta.scopes.len() == u8::MAX.into() {
-      panic!(
+    assert!(!(self.index.meta.scopes.len() == u8::MAX.into()),
         "You reached the limit of 256 scopes. Please contact the developers for further assistance."
       );
-    }
 
     let idx = self.index.meta.scopes.len();
     self.index.meta.scopes.push(scope.into());
@@ -333,7 +327,7 @@ impl Index {
   ) -> Result<Vec<(usize, u8, String)>, IxxError> {
     let search = query
       .split('*')
-      .map(|x| x.as_bytes())
+      .map(str::as_bytes)
       // * at the start or end of a string
       .filter(|x| !x.is_empty())
       .collect::<Vec<_>>();
@@ -377,11 +371,11 @@ impl Index {
     Ok(results)
   }
 
-  pub fn meta(&self) -> &Meta {
+  #[must_use] pub fn meta(&self) -> &Meta {
     &self.meta
   }
 
-  pub fn size(&self) -> usize {
+  #[must_use] pub fn size(&self) -> usize {
     self.entries.len()
   }
 }

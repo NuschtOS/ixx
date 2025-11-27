@@ -30,11 +30,11 @@ pub(crate) fn search(module: SearchModule) -> anyhow::Result<()> {
         .collect();
 
       let json_output = serde_json::to_string_pretty(&entries)?;
-      println!("{}", json_output);
+      println!("{json_output}");
     }
     Format::Text => {
       for (idx, scope_id, name) in result {
-        println!("idx: {}, scope_id: {}, name: {}", idx, scope_id, name);
+        println!("idx: {idx}, scope_id: {scope_id}, name: {name}");
       }
     }
   }

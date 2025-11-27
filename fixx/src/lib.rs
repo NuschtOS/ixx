@@ -17,10 +17,10 @@ impl Index {
   pub fn read(buf: Vec<u8>) -> Result<Self, String> {
     libixx::Index::read(&buf)
       .map(Self)
-      .map_err(|err| format!("{:?}", err))
+      .map_err(|err| format!("{err:?}"))
   }
 
-  pub fn chunk_size(&self) -> u32 {
+  #[must_use] pub fn chunk_size(&self) -> u32 {
     self.0.meta().chunk_size
   }
 
@@ -32,7 +32,7 @@ impl Index {
       .iter()
       .map(|scope| String::try_from(scope.clone()))
       .collect::<Result<Vec<String>, FromUtf8Error>>()
-      .map_err(|err| format!("{:?}", err))
+      .map_err(|err| format!("{err:?}"))
   }
 
   pub fn search(
@@ -52,7 +52,7 @@ impl Index {
           })
           .collect(),
       ),
-      Err(err) => Err(format!("{:?}", err)),
+      Err(err) => Err(format!("{err:?}")),
     }
   }
 
@@ -60,25 +60,25 @@ impl Index {
     self
       .0
       .get_idx_by_name(scope_id, &name)
-      .map_err(|err| format!("{:?}", err))
+      .map_err(|err| format!("{err:?}"))
   }
 
-  pub fn size(&self) -> usize {
+  #[must_use] pub fn size(&self) -> usize {
     self.0.size()
   }
 }
 
 #[wasm_bindgen]
 impl SearchedOption {
-  pub fn idx(&self) -> usize {
+  #[must_use] pub fn idx(&self) -> usize {
     self.idx
   }
 
-  pub fn scope_id(&self) -> u8 {
+  #[must_use] pub fn scope_id(&self) -> u8 {
     self.scope_id
   }
 
-  pub fn name(self) -> String {
+  #[must_use] pub fn name(self) -> String {
     self.name
   }
 }

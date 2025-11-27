@@ -31,9 +31,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
     let scope_idx = index_builder.push_scope(
       scope
         .name
-        .as_ref()
-        .map(|x| x.to_string())
-        .unwrap_or_else(|| scope.url_prefix.to_string()),
+        .as_ref().map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
     );
 
     let mut join_set = JoinSet::new();
@@ -141,7 +139,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   let mut join_set = JoinSet::new();
 
   for (idx, chunk) in packages.chunks(module.chunk_size as usize).enumerate() {
-    let path = module.packages_meta_output.join(format!("{}.json", idx));
+    let path = module.packages_meta_output.join(format!("{idx}.json"));
 
     let meta_string = serde_json::to_string(chunk)
       .with_context(|| format!("Failed to write to {}", path.to_string_lossy()))?;
@@ -168,7 +166,7 @@ fn try_to_parse_url(url: &str) -> Option<Url> {
   match Url::parse(url) {
     Ok(parsed_url) => Some(parsed_url),
     Err(err) => {
-      println!("Failed to parse URL '{}': {}", url, err);
+      println!("Failed to parse URL '{url}': {err}");
       None
     }
   }

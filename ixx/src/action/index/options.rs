@@ -8,7 +8,7 @@ use url::Url;
 use crate::{
   action::index::{Config, OptionEntry, update_declaration},
   args::IndexModule,
-  option::{self},
+  option::{self, Content},
 };
 
 pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyhow::Result<()> {
@@ -45,9 +45,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
     let scope_idx = index_builder.push_scope(
       scope
         .name
-        .as_ref()
-        .map(|x| x.to_string())
-        .unwrap_or_else(|| scope.url_prefix.to_string()),
+        .as_ref().map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
     );
 
     for (name, option) in options {
@@ -63,7 +61,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
       }
 
       let name = match &scope.options_prefix {
-        Some(prefix) => format!("{}.{}", prefix, name),
+        Some(prefix) => format!("{prefix}.{name}"),
         None => name,
       };
 
@@ -137,7 +135,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   let mut join_set = JoinSet::new();
 
   for (idx, chunk) in options.chunks(module.chunk_size as usize).enumerate() {
-    let path = module.options_meta_output.join(format!("{}.json", idx));
+    let path = module.options_meta_output.join(format!("{idx}.json"));
 
     let meta_string = serde_json::to_string(chunk)
       .with_context(|| format!("Failed to write to {}", path.to_string_lossy()))?;
@@ -171,9 +169,9 @@ fn into_option(
       .into_iter()
       .map(|declaration| update_declaration(url_prefix, declaration))
       .collect::<anyhow::Result<_>>()?,
-    default: option.default.map(|option| option.render()),
+    default: option.default.map(Content::render),
     description: markdown::to_html(&option.description),
-    example: option.example.map(|example| example.render()),
+    example: option.example.map(Content::render),
     read_only: option.read_only,
     r#type: option.r#type,
     name: name.to_string(),
