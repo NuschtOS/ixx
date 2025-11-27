@@ -20,7 +20,8 @@ impl Index {
       .map_err(|err| format!("{err:?}"))
   }
 
-  #[must_use] pub fn chunk_size(&self) -> u32 {
+  #[must_use]
+  pub fn chunk_size(&self) -> u32 {
     self.0.meta().chunk_size
   }
 
@@ -63,22 +64,26 @@ impl Index {
       .map_err(|err| format!("{err:?}"))
   }
 
-  #[must_use] pub fn size(&self) -> usize {
+  #[must_use]
+  pub fn size(&self) -> usize {
     self.0.size()
   }
 }
 
 #[wasm_bindgen]
 impl SearchedOption {
-  #[must_use] pub fn idx(&self) -> usize {
+  #[must_use]
+  pub fn idx(&self) -> usize {
     self.idx
   }
 
-  #[must_use] pub fn scope_id(&self) -> u8 {
+  #[must_use]
+  pub fn scope_id(&self) -> u8 {
     self.scope_id
   }
 
-  #[must_use] pub fn name(self) -> String {
+  #[must_use]
+  pub fn name(self) -> String {
     self.name
   }
 }

@@ -31,7 +31,8 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
     let scope_idx = index_builder.push_scope(
       scope
         .name
-        .as_ref().map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
+        .as_ref()
+        .map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
     );
 
     let mut join_set = JoinSet::new();

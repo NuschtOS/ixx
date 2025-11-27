@@ -45,7 +45,8 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
     let scope_idx = index_builder.push_scope(
       scope
         .name
-        .as_ref().map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
+        .as_ref()
+        .map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
     );
 
     for (name, option) in options {
