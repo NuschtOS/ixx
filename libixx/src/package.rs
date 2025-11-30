@@ -12,6 +12,7 @@ pub struct Package {
   pub purl: Option<String>,
   pub declaration: Option<Url>,
   pub description: Option<String>,
+  pub long_description: Option<String>,
   pub eval_error: Option<bool>,
   pub homepages: Vec<Url>,
   pub known_vulnerabilities: Vec<String>,

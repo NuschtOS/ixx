@@ -13,6 +13,7 @@ pub struct Package {
   pub purl: Option<String>,
   pub declaration: Option<Declaration>,
   pub description: Option<String>,
+  pub long_description: Option<String>,
   pub eval_error: Option<bool>,
   pub homepage: Option<OneOrMany<String>>,
   pub known_vulnerabilities: Option<Vec<String>>,
