@@ -163,16 +163,6 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   Ok(())
 }
 
-fn try_to_parse_url(url: &str) -> Option<Url> {
-  match Url::parse(url) {
-    Ok(parsed_url) => Some(parsed_url),
-    Err(err) => {
-      println!("Failed to parse URL '{url}': {err}");
-      None
-    }
-  }
-}
-
 fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<libixx::Package> {
   static CVE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"CVE-(\d{4})-(\d+)").unwrap());
   static GHSA_REGEX: LazyLock<Regex> =
@@ -191,11 +181,11 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
     eval_error: package.eval_error,
     homepages: match package.homepage {
       None => vec![],
-      Some(OneOrMany::One(homepage)) => try_to_parse_url(&homepage).into_iter().collect(),
+      Some(OneOrMany::One(homepage)) => Url::parse(&homepage).with_context(|| format!("Failed to parse URL '{homepage}'")).ok().into_iter().collect(),
       Some(OneOrMany::Many(homepages)) => homepages
         .into_iter()
         .filter_map(|homepage| {
-          try_to_parse_url(&homepage)
+          Url::parse(&homepage).with_context(|| format!("Failed to parse URL '{homepage}'")).ok()
         })
         .collect(),
     },
