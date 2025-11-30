@@ -10,6 +10,7 @@ pub struct Package {
   pub cpe: Option<String>,
   pub disabled: Option<bool>,
   pub possible_cpes: Option<Vec<String>>,
+  pub purl: Option<String>,
   pub declaration: Option<Declaration>,
   pub description: Option<String>,
   pub eval_error: Option<bool>,

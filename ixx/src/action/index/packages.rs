@@ -184,6 +184,7 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
     cpe: package.cpe,
     disabled: package.disabled,
     possible_cpes: package.possible_cpes.unwrap_or_default(),
+    purl: package.purl,
     declaration: package.declaration.map(|declaration | update_declaration(url_prefix, declaration)).transpose()?,
     description: package.description.map(|description| markdown::to_html(&description)),
     eval_error: package.eval_error,
