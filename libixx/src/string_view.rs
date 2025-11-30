@@ -81,5 +81,26 @@ fn ascii_ignore_case_find(a: &[u8], b: &[u8]) -> Option<usize> {
 
   let end = a.len() - (b.len() - 1);
 
-  (0..end).find(|&start| std::iter::zip(&a[start..], b).all(|(a, b)| a.eq_ignore_ascii_case(b)))
+  for start in 0..end {
+    'outer: {
+      for i in 0..b.len() {
+        if !eq_ignore_ascii_case(a[start + i], b[i]) {
+          break 'outer;
+        }
+      }
+      return Some(start);
+    }
+  }
+
+  None
+}
+
+/// This is not correct, as the supplied bytes could be part of a multi-byte utf8 character.
+/// Therefore it can never be correct to motify the case before comparing.
+fn eq_ignore_ascii_case(a: u8, b: u8) -> bool {
+  // set ascii-lowercase bit always to true
+  let a = a | 0b100000;
+  let b = b | 0b100000;
+
+  a == b
 }
