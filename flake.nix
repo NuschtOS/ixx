@@ -22,6 +22,7 @@
               pnpm
               rustc
               rustc.llvmPackages.lld
+              rustfmt
               wasm-pack
             ];
 

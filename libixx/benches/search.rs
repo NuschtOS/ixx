@@ -6,7 +6,10 @@ fn criterion_benchmark(c: &mut Criterion) {
   let mut file = match File::open("../index.ixx") {
     Ok(f) => f,
     Err(e) => {
-      eprintln!("index.ixx is missing, you can download one from https://HEAD.nuschtos-search.pages.dev/data/packages/index.ixx and place it in the root of the project: {}", e);
+      eprintln!(
+        "index.ixx is missing, you can download one from https://HEAD.nuschtos-search.pages.dev/data/packages/index.ixx and place it in the root of the project: {}",
+        e
+      );
       std::process::exit(1);
     }
   };
@@ -28,17 +31,39 @@ fn criterion_benchmark(c: &mut Criterion) {
     b.iter(|| index.search(None, black_box("python313Packages.cryptography"), 500))
   });
 
-  c.bench_function("search for haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
-", |b| {
-    b.iter(|| index.search(None, black_box("haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
-"), 500))
-  });
+  c.bench_function(
+    "search for haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
+",
+    |b| {
+      b.iter(|| {
+        index.search(
+          None,
+          black_box(
+            "haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
+",
+          ),
+          500,
+        )
+      })
+    },
+  );
 
-  c.bench_function("search for haskell.packages.ghc*.Facebook-*-Version
-", |b| {
-    b.iter(|| index.search(None, black_box("haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
-"), 500))
-  });
+  c.bench_function(
+    "search for haskell.packages.ghc*.Facebook-*-Version
+",
+    |b| {
+      b.iter(|| {
+        index.search(
+          None,
+          black_box(
+            "haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
+",
+          ),
+          500,
+        )
+      })
+    },
+  );
 }
 
 criterion_group!(benches, criterion_benchmark);
