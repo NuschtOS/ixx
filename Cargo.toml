@@ -4,6 +4,6 @@ members = ["fixx", "ixx", "libixx"]
 
 [profile.release]
 lto = true
-codegen-units = 1
+codegen-units = 2
 panic = "abort"
 strip = true
