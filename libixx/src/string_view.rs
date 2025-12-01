@@ -90,7 +90,7 @@ pub fn ascii_ignore_case_find(a: &[u8], needle: &[u8]) -> Option<usize> {
 }
 
 pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
-  // the additional bounds check improveds LLVM auto vectoriation?
+  // the additional bounds check improved LLVM auto vectorization?
   a.len() == b.len()
     && a
       .iter()
