@@ -18,6 +18,7 @@
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
               cargo
+              cargo-flamegraph
               clippy
               pnpm
               rustc
