@@ -102,9 +102,10 @@ pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
 
 #[inline(always)]
 pub fn eq_ignore_ascii_case_char(a: u8, b: u8) -> bool {
-  // Branchless check for alphabetic
-  let is_alpha_mask = ((a | b).wrapping_sub(b'A') <= (b'Z' - b'A')) as u8;
-  a == b || (a ^ b == 0b00100000 && is_alpha_mask == 1)
+  // Branchless check for ASCII alphabetic
+  let a_up = a & !0b0010_0000;
+  let b_up = b & !0b0010_0000;
+  (a_up == b_up && a_up >= b'A' && a_up <= b'Z') || a == b
 }
 
 #[cfg(test)]
@@ -137,8 +138,12 @@ mod tests {
 
   #[test]
   fn test_eq_ignore_ascii_case() {
-    for x in b'a'..=b'z' {
-      assert!(eq_ignore_ascii_case_char(x, x.to_ascii_uppercase()));
+    for range in [b'a'..=b'z', b'A'..=b'Z'] {
+        for x in range {
+            let y = x.to_ascii_uppercase();
+            println!("Testing {} and {}", x as char, y as char);
+            assert!(eq_ignore_ascii_case_char(x, y));
+        }
     }
 
     assert!(!eq_ignore_ascii_case_char(b'a', b'b'));
