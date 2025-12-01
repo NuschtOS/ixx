@@ -103,9 +103,7 @@ pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
 #[inline(always)]
 pub fn eq_ignore_ascii_case_char(a: u8, b: u8) -> bool {
   // Branchless check for ASCII alphabetic
-  let a_up = a & !0b0010_0000;
-  let b_up = b & !0b0010_0000;
-  (a_up == b_up && a_up >= b'A' && a_up <= b'Z') || a == b
+  a == b || (a ^ b == 0b00100000 && a.is_ascii_alphabetic())
 }
 
 #[cfg(test)]
