@@ -12,8 +12,32 @@ fn criterion_benchmark(c: &mut Criterion) {
   };
   let index = Index::read_from(&mut file).unwrap();
 
+  c.bench_function("search for hello", |b| {
+    b.iter(|| index.search(None, black_box("hello"), 500))
+  });
+
   c.bench_function("search for zoo", |b| {
     b.iter(|| index.search(None, black_box("zoo"), 500))
+  });
+
+  c.bench_function("search for python313Packages.cryptography", |b| {
+    b.iter(|| index.search(None, black_box("python313Packages.cryptography"), 500))
+  });
+
+  c.bench_function("search for python3*.crypto*", |b| {
+    b.iter(|| index.search(None, black_box("python313Packages.cryptography"), 500))
+  });
+
+  c.bench_function("search for haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
+", |b| {
+    b.iter(|| index.search(None, black_box("haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
+"), 500))
+  });
+
+  c.bench_function("search for haskell.packages.ghc*.Facebook-*-Version
+", |b| {
+    b.iter(|| index.search(None, black_box("haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
+"), 500))
   });
 }
 
