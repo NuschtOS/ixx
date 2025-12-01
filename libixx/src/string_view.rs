@@ -74,125 +74,23 @@ impl StringView<'_, '_> {
   }
 }
 
+#[inline(always)]
 pub fn ascii_ignore_case_find(a: &[u8], needle: &[u8]) -> Option<usize> {
   let n = needle.len();
-  let m = a.len();
-  if n == 0 || m < n {
+  if n == 0 || a.len() < n {
     return None;
   }
 
-  match n {
-    1 => {
-      let x = needle[0];
-      for (i, &b) in a.iter().enumerate() {
-        if eq_ignore_ascii_case_char(b, x) {
-          return Some(i);
-        }
-      }
-      None
-    }
-    2 => {
-      for i in 0..=m - 2 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    3 => {
-      for i in 0..=m - 3 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-          && eq_ignore_ascii_case_char(a[i + 2], needle[2])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    4 => {
-      for i in 0..=m - 4 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-          && eq_ignore_ascii_case_char(a[i + 2], needle[2])
-          && eq_ignore_ascii_case_char(a[i + 3], needle[3])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    5 => {
-      for i in 0..=m - 5 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-          && eq_ignore_ascii_case_char(a[i + 2], needle[2])
-          && eq_ignore_ascii_case_char(a[i + 3], needle[3])
-          && eq_ignore_ascii_case_char(a[i + 4], needle[4])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    6 => {
-      for i in 0..=m - 6 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-          && eq_ignore_ascii_case_char(a[i + 2], needle[2])
-          && eq_ignore_ascii_case_char(a[i + 3], needle[3])
-          && eq_ignore_ascii_case_char(a[i + 4], needle[4])
-          && eq_ignore_ascii_case_char(a[i + 5], needle[5])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    7 => {
-      for i in 0..=m - 7 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-          && eq_ignore_ascii_case_char(a[i + 2], needle[2])
-          && eq_ignore_ascii_case_char(a[i + 3], needle[3])
-          && eq_ignore_ascii_case_char(a[i + 4], needle[4])
-          && eq_ignore_ascii_case_char(a[i + 5], needle[5])
-          && eq_ignore_ascii_case_char(a[i + 6], needle[6])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    8 => {
-      for i in 0..=m - 8 {
-        if eq_ignore_ascii_case_char(a[i], needle[0])
-          && eq_ignore_ascii_case_char(a[i + 1], needle[1])
-          && eq_ignore_ascii_case_char(a[i + 2], needle[2])
-          && eq_ignore_ascii_case_char(a[i + 3], needle[3])
-          && eq_ignore_ascii_case_char(a[i + 4], needle[4])
-          && eq_ignore_ascii_case_char(a[i + 5], needle[5])
-          && eq_ignore_ascii_case_char(a[i + 6], needle[6])
-          && eq_ignore_ascii_case_char(a[i + 7], needle[7])
-        {
-          return Some(i);
-        }
-      }
-      None
-    }
-    _ => {
-      for (i, window) in a.windows(n).enumerate() {
-        if eq_ignore_ascii_case(window, needle) {
-          return Some(i);
-        }
-      }
-      None
+  for (i, window) in a.windows(n).enumerate() {
+    if eq_ignore_ascii_case(window, needle) {
+      return Some(i);
     }
   }
+
+  None
 }
 
+#[inline(always)]
 pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
   // the additional bounds check improved LLVM auto vectorization?
   a.len() == b.len()
@@ -202,8 +100,11 @@ pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
       .all(|(a, b)| eq_ignore_ascii_case_char(*a, *b))
 }
 
+#[inline(always)]
 pub fn eq_ignore_ascii_case_char(a: u8, b: u8) -> bool {
-  a == b || (a ^ b == 0b00100000 && a.is_ascii_alphabetic())
+  // Branchless check for alphabetic
+  let is_alpha_mask = ((a | b).wrapping_sub(b'A') <= (b'Z' - b'A')) as u8;
+  a == b || (a ^ b == 0b00100000 && is_alpha_mask == 1)
 }
 
 #[cfg(test)]
