@@ -28,7 +28,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   });
 
   c.bench_function("search for python3*.crypto*", |b| {
-    b.iter(|| index.search(None, black_box("python313Packages.cryptography"), 500))
+    b.iter(|| index.search(None, black_box("python3*.crypto*"), 500))
   });
 
   c.bench_function(
@@ -38,10 +38,7 @@ fn criterion_benchmark(c: &mut Criterion) {
       b.iter(|| {
         index.search(
           None,
-          black_box(
-            "haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
-",
-          ),
+          black_box("haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version"),
           500,
         )
       })
@@ -55,10 +52,7 @@ fn criterion_benchmark(c: &mut Criterion) {
       b.iter(|| {
         index.search(
           None,
-          black_box(
-            "haskell.packages.ghc9103.Facebook-Password-Hacker-Online-Latest-Version
-",
-          ),
+          black_box("haskell.packages.ghc*.Facebook-*-Version"),
           500,
         )
       })

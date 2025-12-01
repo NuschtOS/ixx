@@ -18,7 +18,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
 
   for scope in &config.scopes {
     let options_json = match &scope.options_json {
-      Some(packages_jsons) => packages_jsons,
+      Some(options_jsons) => options_jsons,
       None => {
         continue;
       }
