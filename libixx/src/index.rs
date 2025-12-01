@@ -262,9 +262,7 @@ impl Index {
       return Err(IxxError::ReferenceOutOfBounds);
     }
 
-    let label = &entry[label_idx];
-
-    match label {
+    match &entry[label_idx] {
       Label::InPlace(string) => Ok(string),
       Label::Reference(_) => Err(IxxError::RecursiveReference),
     }
