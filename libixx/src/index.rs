@@ -126,7 +126,12 @@ impl BinWrite for Label {
   ) -> binrw::BinResult<()> {
     match self {
       Label::InPlace(buf) => {
-        assert!(buf.len() <= (u8::MAX >> 1) as usize, "Label is too wide.");
+        assert!(
+          buf.len() <= (u8::MAX >> 1) as usize,
+          "Label is too large: {} bytes (maximum is {} bytes)",
+          buf.len(),
+          (u8::MAX >> 1)
+        );
 
         (buf.len() as u8).write_options(writer, endian, ())?;
         buf.write_options(writer, endian, ())?;
