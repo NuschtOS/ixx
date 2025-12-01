@@ -24,7 +24,7 @@ impl Display for StringView<'_, '_> {
       Label::Reference(reference) => self.index.resolve_reference(reference).unwrap(),
     };
 
-    write!(f, "{}", unsafe { std::str::from_utf8_unchecked(part) })?;
+    write!(f, "{}", std::str::from_utf8(part).unwrap())?;
 
     for part in &self.parts[1..] {
       let part = match &part {
@@ -32,7 +32,7 @@ impl Display for StringView<'_, '_> {
         Label::Reference(reference) => self.index.resolve_reference(reference).unwrap(),
       };
 
-      write!(f, ".{}", unsafe { std::str::from_utf8_unchecked(part) })?;
+      write!(f, ".{}", std::str::from_utf8(part).unwrap())?;
     }
 
     Ok(())
@@ -40,12 +40,12 @@ impl Display for StringView<'_, '_> {
 }
 
 impl StringView<'_, '_> {
-  pub fn matches(&self, search: &[&[u8]]) -> Result<bool, IxxError> {
+  pub fn matches(&self, search: &[Vec<&[u8]>]) -> Result<bool, IxxError> {
     let mut self_parts_start = 0;
     let mut self_parts_start_str_idx = 0;
 
     for segment in search {
-      for part in segment.split(|char| *char == b'.') {
+      for part in segment {
         'outer: {
           for (self_part_idx, self_part) in self.parts[self_parts_start..].iter().enumerate() {
             let self_part = match &self_part {
@@ -74,33 +74,69 @@ impl StringView<'_, '_> {
   }
 }
 
-fn ascii_ignore_case_find(a: &[u8], b: &[u8]) -> Option<usize> {
-  if a.len() < b.len() || b.is_empty() {
+pub fn ascii_ignore_case_find(a: &[u8], needle: &[u8]) -> Option<usize> {
+  let n = needle.len();
+  if n == 0 || a.len() < n {
     return None;
   }
 
-  let end = a.len() - (b.len() - 1);
-
-  for start in 0..end {
-    'outer: {
-      for i in 0..b.len() {
-        if !eq_ignore_ascii_case(a[start + i], b[i]) {
-          break 'outer;
-        }
-      }
-      return Some(start);
+  for (i, window) in a.windows(n).enumerate() {
+    if eq_ignore_ascii_case(window, needle) {
+      return Some(i);
     }
   }
 
   None
 }
 
-/// This is not correct, as the supplied bytes could be part of a multi-byte utf8 character.
-/// Therefore it can never be correct to motify the case before comparing.
-fn eq_ignore_ascii_case(a: u8, b: u8) -> bool {
-  // set ascii-lowercase bit always to true
-  let a = a | 0b100000;
-  let b = b | 0b100000;
+pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
+  // the additional bounds check improveds LLVM auto vectoriation?
+  a.len() == b.len()
+    && a
+      .iter()
+      .zip(b)
+      .all(|(a, b)| eq_ignore_ascii_case_char(*a, *b))
+}
 
-  a == b
+pub fn eq_ignore_ascii_case_char(a: u8, b: u8) -> bool {
+  a == b || (a ^ b == 0b00100000 && a.is_ascii_alphabetic())
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::string_view::{ascii_ignore_case_find, eq_ignore_ascii_case_char};
+
+  #[test]
+  fn test_ascii_ignore_case_find() {
+    assert_eq!(
+      ascii_ignore_case_find("abcdefg".as_bytes(), "cde".as_bytes()),
+      Some(2)
+    );
+    assert_eq!(
+      ascii_ignore_case_find("abcdefg".as_bytes(), "cdefg".as_bytes()),
+      Some(2)
+    );
+    assert_eq!(
+      ascii_ignore_case_find("abcdefg".as_bytes(), "abc".as_bytes()),
+      Some(0)
+    );
+    assert_eq!(
+      ascii_ignore_case_find("abcdefg".as_bytes(), "abcdefg".as_bytes()),
+      Some(0)
+    );
+    assert_eq!(
+      ascii_ignore_case_find("abcdefg".as_bytes(), "xyz".as_bytes()),
+      None
+    );
+  }
+
+  #[test]
+  fn test_eq_ignore_ascii_case() {
+    for x in b'a'..=b'z' {
+      assert!(eq_ignore_ascii_case_char(x, x.to_ascii_uppercase()));
+    }
+
+    assert!(!eq_ignore_ascii_case_char(b'a', b'b'));
+    assert!(!eq_ignore_ascii_case_char(b'!', b'?'));
+  }
 }

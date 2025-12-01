@@ -224,7 +224,7 @@ impl IndexBuilder {
 
   pub fn push_scope(&mut self, scope: String) -> u8 {
     assert!(
-      self.index.meta.scopes.len() != u8::MAX.into(),
+      self.index.meta.scopes.len() != u8::MAX as usize,
       "You reached the limit of 256 scopes. Please contact the developers for further assistance."
     );
 
@@ -332,7 +332,8 @@ impl Index {
       .map(str::as_bytes)
       // * at the start or end of a string
       .filter(|x| !x.is_empty())
-      .collect::<Vec<_>>();
+      .map(|segment| segment.split(|char| *char == b'.').collect())
+      .collect::<Vec<Vec<_>>>();
 
     let mut results = Vec::new();
 
