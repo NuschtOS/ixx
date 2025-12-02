@@ -26,7 +26,7 @@ pub(crate) struct Scope {
   name: Option<String>,
   license_mapping: HashMap<String, License>,
   maintainer_mapping: HashMap<u32, Maintainer>,
-  team_mapping: HashMap<u32, Team>,
+  team_mapping: HashMap<String, Team>,
   options_json: Option<PathBuf>,
   packages_jsons: Option<Vec<PathBuf>>,
   url_prefix: Url,
@@ -82,7 +82,7 @@ struct Meta {
 struct ScopeMeta {
   licenses: HashMap<String, License>,
   maintainers: HashMap<u32, Maintainer>,
-  teams: HashMap<u32, Team>,
+  teams: HashMap<String, Team>,
 }
 
 pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
