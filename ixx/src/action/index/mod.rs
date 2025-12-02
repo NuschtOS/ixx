@@ -26,6 +26,7 @@ pub(crate) struct Scope {
   name: Option<String>,
   license_mapping: HashMap<String, License>,
   maintainer_mapping: HashMap<u32, Maintainer>,
+  team_mapping: HashMap<u32, Team>,
   options_json: Option<PathBuf>,
   packages_jsons: Option<Vec<PathBuf>>,
   url_prefix: Url,
@@ -63,6 +64,13 @@ struct Maintainer {
   name: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct Team {
+  members: Vec<String>,
+  scope: String,
+}
+
 #[derive(Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Meta {
@@ -74,6 +82,7 @@ struct Meta {
 struct ScopeMeta {
   licenses: HashMap<String, License>,
   maintainers: HashMap<u32, Maintainer>,
+  teams: HashMap<u32, Team>,
 }
 
 pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
@@ -109,6 +118,7 @@ pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
               ScopeMeta {
                 licenses: scope.license_mapping.clone(),
                 maintainers: scope.maintainer_mapping.clone(),
+                teams: scope.team_mapping.clone(),
               },
             )
           })
