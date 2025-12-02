@@ -67,7 +67,7 @@ struct Maintainer {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Team {
-  members: Vec<String>,
+  members: Vec<u32>,
   scope: String,
 }
 
