@@ -19,6 +19,7 @@
               cargo
               cargo-flamegraph
               clippy
+              nodejs # for npm
               pnpm
               rustc
               rustc.llvmPackages.lld
