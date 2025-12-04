@@ -9,8 +9,11 @@ pub(super) struct Args {
 
 #[derive(Subcommand)]
 pub(super) enum Action {
+  #[clap(about = "Build the index")]
   Index(IndexModule),
+  #[clap(about = "Search the index for packages or options")]
   Search(SearchModule),
+  #[clap(about = "Show index metadata")]
   Meta(MetaModule),
 }
 
