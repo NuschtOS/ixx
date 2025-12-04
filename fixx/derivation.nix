@@ -5,6 +5,7 @@
 , rustc
 , wasm-pack
 , wasm-bindgen-cli_0_2_104
+, release ? true
 }:
 
 let
@@ -31,7 +32,7 @@ rustPlatform.buildRustPackage rec {
     export HOME=$(mktemp -d)
 
     cd fixx
-    wasm-pack build --release --target web --scope nuschtos
+    wasm-pack build --${if release then "release" else "dev"} --target web --scope nuschtos
     cd pkg
     npm pack
     cd ../..
