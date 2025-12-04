@@ -119,15 +119,15 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   }
 
   println!(
-    "Writing packages meta to {}",
-    module.packages_meta_output.to_string_lossy()
+    "Writing packages chunks to {}",
+    module.packages_chunks_output.to_string_lossy()
   );
 
-  if !module.packages_meta_output.exists() {
-    std::fs::create_dir(&module.packages_meta_output).with_context(|| {
+  if !module.packages_chunks_output.exists() {
+    std::fs::create_dir(&module.packages_chunks_output).with_context(|| {
       format!(
         "Failed to create dir {}",
-        module.packages_meta_output.to_string_lossy()
+        module.packages_chunks_output.to_string_lossy()
       )
     })?;
   }
@@ -140,7 +140,7 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   let mut join_set = JoinSet::new();
 
   for (idx, chunk) in packages.chunks(module.chunk_size as usize).enumerate() {
-    let path = module.packages_meta_output.join(format!("{idx}.json"));
+    let path = module.packages_chunks_output.join(format!("{idx}.json"));
 
     let meta_string = serde_json::to_string(chunk)
       .with_context(|| format!("Failed to write to {}", path.to_string_lossy()))?;

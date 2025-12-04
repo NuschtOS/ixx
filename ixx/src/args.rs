@@ -30,14 +30,14 @@ pub(super) struct IndexModule {
   #[clap(long, default_value = "options/index.ixx")]
   pub(super) options_index_output: PathBuf,
 
-  #[clap(long, default_value = "options/meta")]
-  pub(crate) options_meta_output: PathBuf,
+  #[clap(long, default_value = "options/chunks")]
+  pub(crate) options_chunks_output: PathBuf,
 
   #[clap(long, default_value = "packages/index.ixx")]
   pub(super) packages_index_output: PathBuf,
 
-  #[clap(long, default_value = "packages/meta")]
-  pub(crate) packages_meta_output: PathBuf,
+  #[clap(long, default_value = "packages/chunks")]
+  pub(crate) packages_chunks_output: PathBuf,
 
   #[clap(long, default_value = "meta.json")]
   pub(crate) meta_output: PathBuf,

@@ -115,15 +115,15 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   }
 
   println!(
-    "Writing options meta to {}",
-    module.options_meta_output.to_string_lossy()
+    "Writing options chunks to {}",
+    module.options_chunks_output.to_string_lossy()
   );
 
-  if !module.options_meta_output.exists() {
-    std::fs::create_dir(&module.options_meta_output).with_context(|| {
+  if !module.options_chunks_output.exists() {
+    std::fs::create_dir(&module.options_chunks_output).with_context(|| {
       format!(
         "Failed to create dir {}",
-        module.options_meta_output.to_string_lossy()
+        module.options_chunks_output.to_string_lossy()
       )
     })?;
   }
@@ -136,9 +136,9 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   let mut join_set = JoinSet::new();
 
   for (idx, chunk) in options.chunks(module.chunk_size as usize).enumerate() {
-    let path = module.options_meta_output.join(format!("{idx}.json"));
+    let path = module.options_chunks_output.join(format!("{idx}.json"));
 
-    let meta_string = serde_json::to_string(chunk)
+    let chunk_string = serde_json::to_string(chunk)
       .with_context(|| format!("Failed to write to {}", path.to_string_lossy()))?;
 
     join_set.spawn(async move {
@@ -146,7 +146,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
         .await
         .with_context(|| format!("Failed to create {}", path.to_string_lossy()))?;
 
-      file.write_all(meta_string.as_bytes()).await?;
+      file.write_all(chunk_string.as_bytes()).await?;
 
       Ok::<_, anyhow::Error>(())
     });
