@@ -61,6 +61,9 @@ fn test() {
     vec![]
   );
 
+  // query with no matches
+  assert_eq!(index.search(None, "nonexistent.option", 10).unwrap(), vec![]);
+
   // TEST options with same name in different scopes
   assert_eq!(
     index.search(None, "ho*debug", 10).unwrap(),
