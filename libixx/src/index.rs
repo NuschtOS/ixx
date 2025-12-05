@@ -306,8 +306,10 @@ impl Index {
         .entries
         .iter()
         .enumerate()
-        .find(|(idx, entry)| entry.scope_id == scope_id && do_labels_match(*idx, &entry.labels, &labels))
-        .map(|(idx, _)| idx),
+        .find(|(entry_idx, entry)| {
+          entry.scope_id == scope_id && do_labels_match(*entry_idx, &entry.labels, &labels)
+        })
+        .map(|(entry_idx, _)| entry_idx),
     )
   }
 
