@@ -48,15 +48,7 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function(
     "search for haskell.packages.ghc*.Facebook-*-Version
 ",
-    |b| {
-      b.iter(|| {
-        index.search(
-          None,
-          black_box("haskell.packages.ghc*.Facebook-*-Version"),
-          500,
-        )
-      })
-    },
+    |b| b.iter(|| index.search(None, black_box("haskell.packages.ghc*.Facebook-*-Version"), 500)),
   );
 }
 

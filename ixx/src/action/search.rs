@@ -22,11 +22,7 @@ pub(crate) fn search(module: SearchModule) -> anyhow::Result<()> {
     Format::Json => {
       let entries: Vec<Entry> = result
         .into_iter()
-        .map(|(idx, scope_id, name)| Entry {
-          idx,
-          scope_id,
-          name,
-        })
+        .map(|(idx, scope_id, name)| Entry { idx, scope_id, name })
         .collect();
 
       let json_output = serde_json::to_string_pretty(&entries)?;

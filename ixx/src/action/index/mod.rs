@@ -89,18 +89,9 @@ pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
   let config: Config = {
     let raw_config = tokio::fs::read_to_string(&module.config)
       .await
-      .with_context(|| {
-        format!(
-          "Failed to read config file: {}",
-          module.config.to_string_lossy()
-        )
-      })?;
-    serde_json::from_str(&raw_config).with_context(|| {
-      format!(
-        "Failed to parse config file: {}",
-        module.config.to_string_lossy()
-      )
-    })?
+      .with_context(|| format!("Failed to read config file: {}", module.config.to_string_lossy()))?;
+    serde_json::from_str(&raw_config)
+      .with_context(|| format!("Failed to parse config file: {}", module.config.to_string_lossy()))?
   };
 
   let (options_result, packages_result, meta_result) = join!(

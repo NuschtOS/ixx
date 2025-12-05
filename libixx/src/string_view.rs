@@ -53,8 +53,7 @@ impl StringView<'_, '_> {
               Label::Reference(reference) => self.index.resolve_reference(reference)?,
             };
 
-            if let Some(idx) = ascii_ignore_case_find(&self_part[self_parts_start_str_idx..], part)
-            {
+            if let Some(idx) = ascii_ignore_case_find(&self_part[self_parts_start_str_idx..], part) {
               self_parts_start += self_part_idx;
               if self_part_idx == 0 {
                 self_parts_start_str_idx += idx;
@@ -93,11 +92,7 @@ pub fn ascii_ignore_case_find(a: &[u8], needle: &[u8]) -> Option<usize> {
 #[inline(always)]
 pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
   // the additional bounds check improved LLVM auto vectorization?
-  a.len() == b.len()
-    && a
-      .iter()
-      .zip(b)
-      .all(|(a, b)| eq_ignore_ascii_case_char(*a, *b))
+  a.len() == b.len() && a.iter().zip(b).all(|(a, b)| eq_ignore_ascii_case_char(*a, *b))
 }
 
 #[inline(always)]

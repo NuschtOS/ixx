@@ -136,10 +136,7 @@ impl BinWrite for Label {
         (buf.len() as u8).write_options(writer, endian, ())?;
         buf.write_options(writer, endian, ())?;
       }
-      Label::Reference(Reference {
-        entry_idx,
-        label_idx,
-      }) => {
+      Label::Reference(Reference { entry_idx, label_idx }) => {
         assert!(
           *label_idx <= (u8::MAX >> 3),
           "Label index too big, contact developer!"
@@ -212,10 +209,9 @@ impl IndexBuilder {
             });
           }
 
-          self.label_cache.insert(
-            segment.to_vec(),
-            (self.index.entries.len(), label_idx as u8),
-          );
+          self
+            .label_cache
+            .insert(segment.to_vec(), (self.index.entries.len(), label_idx as u8));
 
           Label::InPlace(segment.to_vec())
         })
@@ -280,8 +276,7 @@ impl Index {
         for (
           entry_idx,
           Entry {
-            labels: inner_labels,
-            ..
+            labels: inner_labels, ..
           },
         ) in self.entries.iter().enumerate()
         {
@@ -398,9 +393,7 @@ fn do_labels_match(entry_idx: usize, labels: &[Label], search: &[Reference]) -> 
     .enumerate()
     .zip(search.iter())
     .filter(|&((label_idx, entry), search)| match entry {
-      Label::InPlace(_) => {
-        entry_idx == search.entry_idx as usize && label_idx == search.label_idx as usize
-      }
+      Label::InPlace(_) => entry_idx == search.entry_idx as usize && label_idx == search.label_idx as usize,
       Label::Reference(reference) => reference == search,
     })
     .count();
@@ -410,52 +403,88 @@ fn do_labels_match(entry_idx: usize, labels: &[Label], search: &[Reference]) -> 
 
 #[cfg(test)]
 mod tests {
-    use crate::index::*;
+  use crate::index::*;
 
-    #[test]
-    fn test_labels_match_inplace() {
-        let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
-        let search = vec![
-            Reference { entry_idx: 0, label_idx: 0 },
-            Reference { entry_idx: 0, label_idx: 1 },
-        ];
-        assert!(do_labels_match(0, &labels, &search));
-    }
+  #[test]
+  fn test_labels_match_inplace() {
+    let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
+    let search = vec![
+      Reference {
+        entry_idx: 0,
+        label_idx: 0,
+      },
+      Reference {
+        entry_idx: 0,
+        label_idx: 1,
+      },
+    ];
+    assert!(do_labels_match(0, &labels, &search));
+  }
 
-    #[test]
-    fn test_labels_match_reference() {
-        let reference = Reference { entry_idx: 1, label_idx: 2 };
-        let labels = vec![Label::Reference(reference.clone())];
-        let search = vec![reference.clone()];
-        assert!(do_labels_match(0, &labels, &search));
-    }
+  #[test]
+  fn test_labels_match_reference() {
+    let reference = Reference {
+      entry_idx: 1,
+      label_idx: 2,
+    };
+    let labels = vec![Label::Reference(reference.clone())];
+    let search = vec![reference.clone()];
+    assert!(do_labels_match(0, &labels, &search));
+  }
 
-    #[test]
-    fn test_labels_mismatch_inplace() {
-        let labels = vec![Label::InPlace(b"foo".to_vec())];
-        let search = vec![Reference { entry_idx: 1, label_idx: 0 }];
-        assert!(!do_labels_match(0, &labels, &search));
-    }
+  #[test]
+  fn test_labels_mismatch_inplace() {
+    let labels = vec![Label::InPlace(b"foo".to_vec())];
+    let search = vec![Reference {
+      entry_idx: 1,
+      label_idx: 0,
+    }];
+    assert!(!do_labels_match(0, &labels, &search));
+  }
 
-    #[test]
-    fn test_labels_mismatch_reference() {
-        let labels = vec![Label::Reference(Reference { entry_idx: 1, label_idx: 1 })];
-        let search = vec![Reference { entry_idx: 2, label_idx: 1 }];
-        assert!(!do_labels_match(0, &labels, &search));
+  #[test]
+  fn test_labels_mismatch_reference() {
+    let labels = vec![Label::Reference(Reference {
+      entry_idx: 1,
+      label_idx: 1,
+    })];
+    let search = vec![Reference {
+      entry_idx: 2,
+      label_idx: 1,
+    }];
+    assert!(!do_labels_match(0, &labels, &search));
 
-        let labels = vec![Label::Reference(Reference { entry_idx: 1, label_idx: 1 })];
-        let search = vec![Reference { entry_idx: 1, label_idx: 2 }];
-        assert!(!do_labels_match(0, &labels, &search));
-    }
+    let labels = vec![Label::Reference(Reference {
+      entry_idx: 1,
+      label_idx: 1,
+    })];
+    let search = vec![Reference {
+      entry_idx: 1,
+      label_idx: 2,
+    }];
+    assert!(!do_labels_match(0, &labels, &search));
+  }
 
-    #[test]
-    fn test_labels_length_mismatch() {
-        let labels = vec![Label::InPlace(b"foo".to_vec())];
-        let search = vec![Reference { entry_idx: 0, label_idx: 0 }, Reference { entry_idx: 0, label_idx: 1 }];
-        assert!(!do_labels_match(0, &labels, &search));
+  #[test]
+  fn test_labels_length_mismatch() {
+    let labels = vec![Label::InPlace(b"foo".to_vec())];
+    let search = vec![
+      Reference {
+        entry_idx: 0,
+        label_idx: 0,
+      },
+      Reference {
+        entry_idx: 0,
+        label_idx: 1,
+      },
+    ];
+    assert!(!do_labels_match(0, &labels, &search));
 
-        let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
-        let search = vec![Reference { entry_idx: 0, label_idx: 0 }];
-        assert!(!do_labels_match(0, &labels, &search));
-    }
+    let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
+    let search = vec![Reference {
+      entry_idx: 0,
+      label_idx: 0,
+    }];
+    assert!(!do_labels_match(0, &labels, &search));
+  }
 }

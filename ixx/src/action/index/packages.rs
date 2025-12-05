@@ -45,14 +45,12 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
       join_set.spawn(async move {
         println!("Parsing {}", packages_json.to_string_lossy());
         let packages: Vec<package::Package> = {
-          let raw_packages = tokio::fs::read_to_string(&packages_json)
-            .await
-            .with_context(|| {
-              format!(
-                "Failed to read packages json: {}",
-                packages_json.to_string_lossy()
-              )
-            })?;
+          let raw_packages = tokio::fs::read_to_string(&packages_json).await.with_context(|| {
+            format!(
+              "Failed to read packages json: {}",
+              packages_json.to_string_lossy()
+            )
+          })?;
           serde_json::from_str(&raw_packages).with_context(|| {
             format!(
               "Failed to parse packages json: {}",
@@ -175,17 +173,30 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
     disabled: package.disabled,
     possible_cpes: package.possible_cpes.unwrap_or_default(),
     purl: package.purl,
-    declaration: package.declaration.map(|declaration | update_declaration(url_prefix, declaration)).transpose()?,
-    description: package.description.map(|description| markdown::to_html(&description)),
-    long_description: package.long_description.map(|description| markdown::to_html(&description)),
+    declaration: package
+      .declaration
+      .map(|declaration| update_declaration(url_prefix, declaration))
+      .transpose()?,
+    description: package
+      .description
+      .map(|description| markdown::to_html(&description)),
+    long_description: package
+      .long_description
+      .map(|description| markdown::to_html(&description)),
     eval_error: package.eval_error,
     homepages: match package.homepage {
       None => vec![],
-      Some(OneOrMany::One(homepage)) => Url::parse(&homepage).with_context(|| format!("Failed to parse URL '{homepage}'")).ok().into_iter().collect(),
+      Some(OneOrMany::One(homepage)) => Url::parse(&homepage)
+        .with_context(|| format!("Failed to parse URL '{homepage}'"))
+        .ok()
+        .into_iter()
+        .collect(),
       Some(OneOrMany::Many(homepages)) => homepages
         .into_iter()
         .filter_map(|homepage| {
-          Url::parse(&homepage).with_context(|| format!("Failed to parse URL '{homepage}'")).ok()
+          Url::parse(&homepage)
+            .with_context(|| format!("Failed to parse URL '{homepage}'"))
+            .ok()
         })
         .collect(),
     },
@@ -195,20 +206,21 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
       .into_iter()
       .map(|vulnerability| {
         let vulnerability = markdown::to_html(&vulnerability);
-        let vulnerability = CVE_REGEX
+        let vulnerability = CVE_REGEX.replace_all(&vulnerability, |caps: &Captures| {
+          format!(
+            "<a href=\"https://www.cve.org/CVERecord?id=CVE-{0}-{1}\" target=\"_blank\">CVE-{0}-{1}</a>",
+            &caps[1], &caps[2]
+          )
+        });
+
+        GHSA_REGEX
           .replace_all(&vulnerability, |caps: &Captures| {
             format!(
-              "<a href=\"https://www.cve.org/CVERecord?id=CVE-{0}-{1}\" target=\"_blank\">CVE-{0}-{1}</a>",
-              &caps[1], &caps[2]
-            )
-          });
-
-        GHSA_REGEX.replace_all(&vulnerability, |caps: &Captures|{
-          format!(
               "<a href=\"https://github.com/advisories/GHSA{0}\" target=\"_blank\">GHSA{0}</a>",
               &caps[1]
             )
-        }).to_string()
+          })
+          .to_string()
       })
       .collect(),
     licenses: package.licenses.unwrap_or_default(),

@@ -28,18 +28,9 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
     let options: HashMap<String, option::Option> = {
       let raw_options = tokio::fs::read_to_string(&options_json)
         .await
-        .with_context(|| {
-          format!(
-            "Failed to read options json: {}",
-            options_json.to_string_lossy()
-          )
-        })?;
-      serde_json::from_str(&raw_options).with_context(|| {
-        format!(
-          "Failed to parse options json: {}",
-          options_json.to_string_lossy()
-        )
-      })?
+        .with_context(|| format!("Failed to read options json: {}", options_json.to_string_lossy()))?;
+      serde_json::from_str(&raw_options)
+        .with_context(|| format!("Failed to parse options json: {}", options_json.to_string_lossy()))?
     };
 
     let scope_idx = index_builder.push_scope(
@@ -159,11 +150,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   Ok(())
 }
 
-fn into_option(
-  url_prefix: &Url,
-  name: &str,
-  option: option::Option,
-) -> anyhow::Result<libixx::Option> {
+fn into_option(url_prefix: &Url, name: &str, option: option::Option) -> anyhow::Result<libixx::Option> {
   Ok(libixx::Option {
     declarations: option
       .declarations

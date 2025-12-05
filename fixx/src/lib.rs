@@ -46,11 +46,7 @@ impl Index {
       Ok(options) => Ok(
         options
           .into_iter()
-          .map(|(idx, scope_id, name)| SearchedOption {
-            idx,
-            scope_id,
-            name,
-          })
+          .map(|(idx, scope_id, name)| SearchedOption { idx, scope_id, name })
           .collect(),
       ),
       Err(err) => Err(format!("{err:?}")),

@@ -27,11 +27,7 @@ fn test() {
     index.search(None, "ho*auto", 10).unwrap(),
     vec![
       (7, 0, "services.home-manager.autoUpgrade.enable".to_string()),
-      (
-        8,
-        0,
-        "services.home-manager.autoUpgrade.frequency".to_string()
-      )
+      (8, 0, "services.home-manager.autoUpgrade.frequency".to_string())
     ]
   );
 
@@ -57,15 +53,11 @@ fn test() {
 
   // TEST scopes
   assert_eq!(
-    index
-      .search(Some(0), "enablenixpkgsreleasecheck", 10)
-      .unwrap(),
+    index.search(Some(0), "enablenixpkgsreleasecheck", 10).unwrap(),
     vec![(1, 0, "home.enableNixpkgsReleaseCheck".to_string())]
   );
   assert_eq!(
-    index
-      .search(Some(1), "enablenixpkgsreleasecheck", 10)
-      .unwrap(),
+    index.search(Some(1), "enablenixpkgsreleasecheck", 10).unwrap(),
     vec![]
   );
 
@@ -78,10 +70,7 @@ fn test() {
     ]
   );
 
-  assert_eq!(
-    index.get_idx_by_name(0, "home.enableDebugInfo").unwrap(),
-    Some(0)
-  );
+  assert_eq!(index.get_idx_by_name(0, "home.enableDebugInfo").unwrap(), Some(0));
 
   // Test ambiguous names: pretalx, nixosTests.pretalx, nixosTests.allDrivers.pretalx
   assert_eq!(
@@ -95,9 +84,7 @@ fn test() {
     "Should find 'nixosTests.pretalx' in scope 0"
   );
   assert_eq!(
-    index
-      .get_idx_by_name(0, "nixosTests.allDrivers.pretalx")
-      .unwrap(),
+    index.get_idx_by_name(0, "nixosTests.allDrivers.pretalx").unwrap(),
     Some(11),
     "Should find 'nixosTests.allDrivers.pretalx' in scope 0"
   );
