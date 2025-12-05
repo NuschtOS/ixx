@@ -407,3 +407,55 @@ fn do_labels_match(entry_idx: usize, labels: &[Label], search: &[Reference]) -> 
 
   matching == labels.len() && matching == search.len()
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::index::*;
+
+    #[test]
+    fn test_labels_match_inplace() {
+        let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
+        let search = vec![
+            Reference { entry_idx: 0, label_idx: 0 },
+            Reference { entry_idx: 0, label_idx: 1 },
+        ];
+        assert!(do_labels_match(0, &labels, &search));
+    }
+
+    #[test]
+    fn test_labels_match_reference() {
+        let reference = Reference { entry_idx: 1, label_idx: 2 };
+        let labels = vec![Label::Reference(reference.clone())];
+        let search = vec![reference.clone()];
+        assert!(do_labels_match(0, &labels, &search));
+    }
+
+    #[test]
+    fn test_labels_mismatch_inplace() {
+        let labels = vec![Label::InPlace(b"foo".to_vec())];
+        let search = vec![Reference { entry_idx: 1, label_idx: 0 }];
+        assert!(!do_labels_match(0, &labels, &search));
+    }
+
+    #[test]
+    fn test_labels_mismatch_reference() {
+        let labels = vec![Label::Reference(Reference { entry_idx: 1, label_idx: 1 })];
+        let search = vec![Reference { entry_idx: 2, label_idx: 1 }];
+        assert!(!do_labels_match(0, &labels, &search));
+
+        let labels = vec![Label::Reference(Reference { entry_idx: 1, label_idx: 1 })];
+        let search = vec![Reference { entry_idx: 1, label_idx: 2 }];
+        assert!(!do_labels_match(0, &labels, &search));
+    }
+
+    #[test]
+    fn test_labels_length_mismatch() {
+        let labels = vec![Label::InPlace(b"foo".to_vec())];
+        let search = vec![Reference { entry_idx: 0, label_idx: 0 }, Reference { entry_idx: 0, label_idx: 1 }];
+        assert!(!do_labels_match(0, &labels, &search));
+
+        let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
+        let search = vec![Reference { entry_idx: 0, label_idx: 0 }];
+        assert!(!do_labels_match(0, &labels, &search));
+    }
+}
