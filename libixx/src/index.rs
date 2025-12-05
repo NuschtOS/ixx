@@ -217,6 +217,9 @@ impl IndexBuilder {
         })
         .collect()
     } else {
+      self
+        .label_cache
+        .insert(name.as_bytes().to_vec(), (self.index.entries.len(), 0));
       vec![Label::InPlace(name.into())]
     };
 
