@@ -372,17 +372,18 @@ impl From<IndexBuilder> for Index {
 }
 
 fn do_labels_match(entry_idx: usize, labels: &[Label], search: &[Reference]) -> bool {
-  let matching = labels
+  if labels.len() != search.len() {
+    return false;
+  }
+
+  labels
     .iter()
     .enumerate()
     .zip(search.iter())
-    .filter(|&((label_idx, entry), search)| match entry {
+    .all(|((label_idx, entry), search)| match entry {
       Label::InPlace(_) => entry_idx == search.entry_idx as usize && label_idx == search.label_idx as usize,
       Label::Reference(reference) => reference == search,
     })
-    .count();
-
-  matching == labels.len() && matching == search.len()
 }
 
 #[cfg(test)]
