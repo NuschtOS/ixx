@@ -39,10 +39,13 @@ impl Index {
   pub fn search(
     &self,
     scope_id: Option<u8>,
-    query: String,
+    #[wasm_bindgen(unchecked_param_type = "string")] query: &JsValue,
     max_results: usize,
   ) -> Result<Vec<SearchedOption>, String> {
-    match self.0.search(scope_id, &query, max_results) {
+    let query_str = query
+      .as_string()
+      .ok_or_else(|| "Invalid query: expected a string".to_string())?;
+    match self.0.search(scope_id, &query_str, max_results) {
       Ok(options) => Ok(
         options
           .into_iter()
@@ -53,10 +56,17 @@ impl Index {
     }
   }
 
-  pub fn get_idx_by_name(&self, scope_id: u8, name: String) -> Result<Option<usize>, String> {
+  pub fn get_idx_by_name(
+    &self,
+    scope_id: u8,
+    #[wasm_bindgen(unchecked_param_type = "string")] name: &JsValue,
+  ) -> Result<Option<usize>, String> {
+    let name_str = name
+      .as_string()
+      .ok_or_else(|| "Invalid name: expected a string".to_string())?;
     self
       .0
-      .get_idx_by_name(scope_id, &name)
+      .get_idx_by_name(scope_id, &name_str)
       .map_err(|err| format!("{err:?}"))
   }
 

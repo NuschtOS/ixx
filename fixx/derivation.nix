@@ -32,7 +32,7 @@ rustPlatform.buildRustPackage rec {
     export HOME=$(mktemp -d)
 
     cd fixx
-    wasm-pack build --${if release then "release" else "dev"} --target web --scope nuschtos
+    wasm-pack build --${if release then "release" else "dev"} --target web --scope nuschtos --reference-types
     cd pkg
     npm pack
     cd ../..

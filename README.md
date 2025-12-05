@@ -5,7 +5,7 @@ ixx is the search engine and index creation tool used by [NüschtOS Search](http
 ## Building fixx
 
 ```
-wasm-pack build --release fixx --target web
+wasm-pack build --release fixx --target web --reference-types
 ```
 
 The result will be in `fixx/pkg`.
