@@ -487,4 +487,155 @@ mod tests {
     }];
     assert!(!do_labels_match(0, &labels, &search));
   }
+
+  #[test]
+  fn test_resolve_reference_inplace() {
+    let entry = Entry {
+      scope_id: 0,
+      labels: vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())],
+    };
+    let index = Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"abc".to_vec(),
+        }],
+      },
+      entries: vec![entry],
+    };
+    let reference = Reference {
+      entry_idx: 0,
+      label_idx: 1,
+    };
+    let result = index.resolve_reference(&reference);
+    assert_eq!(result.unwrap(), b"bar");
+  }
+
+  #[test]
+  fn test_resolve_reference_multiple_entries() {
+    let entry1 = Entry {
+      scope_id: 0,
+      labels: vec![Label::InPlace(b"foo".to_vec())],
+    };
+    let entry2 = Entry {
+      scope_id: 0,
+      labels: vec![Label::InPlace(b"bar".to_vec()), Label::InPlace(b"baz".to_vec())],
+    };
+    let index = Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"abc".to_vec(),
+        }],
+      },
+      entries: vec![entry1, entry2],
+    };
+    let reference = Reference {
+      entry_idx: 1,
+      label_idx: 1,
+    };
+    let result = index.resolve_reference(&reference);
+    assert_eq!(result.unwrap(), b"baz");
+  }
+
+  #[test]
+  fn test_resolve_reference_mixed_labels() {
+    let entry = Entry {
+      scope_id: 0,
+      labels: vec![
+        Label::Reference(Reference {
+          entry_idx: 0,
+          label_idx: 0,
+        }),
+        Label::InPlace(b"real".to_vec()),
+      ],
+    };
+    let index = Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"abc".to_vec(),
+        }],
+      },
+      entries: vec![entry],
+    };
+    let reference = Reference {
+      entry_idx: 0,
+      label_idx: 1,
+    };
+    let result = index.resolve_reference(&reference);
+    assert_eq!(result.unwrap(), b"real");
+  }
+
+  #[test]
+  fn test_resolve_reference_out_of_bounds_entry() {
+    let entry = Entry {
+      scope_id: 0,
+      labels: vec![Label::InPlace(b"foo".to_vec())],
+    };
+    let index = Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"abc".to_vec(),
+        }],
+      },
+      entries: vec![entry],
+    };
+    let reference = Reference {
+      entry_idx: 1,
+      label_idx: 0,
+    };
+    let result = index.resolve_reference(&reference);
+    assert!(matches!(result, Err(IxxError::ReferenceOutOfBounds)));
+  }
+
+  #[test]
+  fn test_resolve_reference_out_of_bounds_label() {
+    let entry = Entry {
+      scope_id: 0,
+      labels: vec![Label::InPlace(b"foo".to_vec())],
+    };
+    let index = Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"abc".to_vec(),
+        }],
+      },
+      entries: vec![entry],
+    };
+    let reference = Reference {
+      entry_idx: 0,
+      label_idx: 1,
+    };
+    let result = index.resolve_reference(&reference);
+    assert!(matches!(result, Err(IxxError::ReferenceOutOfBounds)));
+  }
+
+  #[test]
+  fn test_resolve_reference_recursive() {
+    let entry = Entry {
+      scope_id: 0,
+      labels: vec![Label::Reference(Reference {
+        entry_idx: 0,
+        label_idx: 0,
+      })],
+    };
+    let index = Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"abc".to_vec(),
+        }],
+      },
+      entries: vec![entry],
+    };
+    let reference = Reference {
+      entry_idx: 0,
+      label_idx: 0,
+    };
+    let result = index.resolve_reference(&reference);
+    assert!(matches!(result, Err(IxxError::RecursiveReference)));
+  }
 }
