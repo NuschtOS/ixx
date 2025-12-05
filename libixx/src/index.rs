@@ -403,6 +403,91 @@ mod tests {
   use crate::index::*;
 
   #[test]
+  fn test_push_one_entry() {
+    let mut builder = IndexBuilder::new(1);
+    builder.push(0, "foo.bar");
+    let index: Index = builder.into();
+
+    assert_eq!(index.entries.len(), 1);
+    assert_eq!(index.entries[0].labels.len(), 2);
+    match &index.entries[0].labels[0] {
+      Label::InPlace(label) => assert_eq!(label, b"foo"),
+      _ => panic!("Expected InPlace label for 'foo'"),
+    }
+    match &index.entries[0].labels[1] {
+      Label::InPlace(label) => assert_eq!(label, b"bar"),
+      _ => panic!("Expected InPlace label for 'bar'"),
+    }
+  }
+
+  #[test]
+  fn test_push_two_entries_with_compression() {
+    let mut builder = IndexBuilder::new(1);
+    builder.push(0, "foo.bar");
+    builder.push(0, "foo.buz");
+    let index: Index = builder.into();
+
+    assert_eq!(index.entries.len(), 2);
+
+    assert_eq!(index.entries[0].labels.len(), 2);
+    match &index.entries[0].labels[0] {
+      Label::InPlace(label) => assert_eq!(label, b"foo"),
+      _ => unreachable!("Expected no Reference label"),
+    }
+    match &index.entries[0].labels[1] {
+      Label::InPlace(label) => assert_eq!(label, b"bar"),
+      _ => unreachable!("Expected no Reference label"),
+    }
+
+    assert_eq!(index.entries[1].labels.len(), 2);
+    match &index.entries[1].labels[0] {
+      Label::Reference(reference) => {
+        assert_eq!(reference.entry_idx, 0);
+        assert_eq!(reference.label_idx, 0);
+      }
+      _ => unreachable!("Expected no InPlace label"),
+    }
+    match &index.entries[1].labels[1] {
+      Label::InPlace(label) => assert_eq!(label, b"buz"),
+      Label::Reference(reference) => {
+        assert_eq!(reference.entry_idx, 0);
+        assert_eq!(reference.label_idx, 1);
+      }
+    }
+  }
+
+  #[test]
+  fn test_push_compression_inplace_different_position() {
+    let mut builder = IndexBuilder::new(1);
+    builder.push(0, "pretalx");
+    builder.push(0, "nixosTests.pretalx");
+    let index: Index = builder.into();
+
+    assert_eq!(index.entries.len(), 2);
+
+    assert_eq!(index.entries[0].labels.len(), 1);
+    match &index.entries[0].labels[0] {
+      Label::InPlace(label) => assert_eq!(label, b"pretalx"),
+      _ => unreachable!("Expected no Reference label"),
+    }
+
+    assert_eq!(index.entries[1].labels.len(), 2);
+    match &index.entries[1].labels[0] {
+      Label::Reference(reference) => {
+        assert_eq!(reference.entry_idx, 0);
+        assert_eq!(reference.label_idx, 0);
+      }
+      Label::InPlace(label) => assert_eq!(label, b"nixosTests"),
+    }
+    match &index.entries[1].labels[1] {
+      Label::Reference(reference) => {
+        assert_eq!(reference.entry_idx, 0);
+      }
+      _ => unreachable!("Expected no InPlace label"),
+    }
+  }
+
+  #[test]
   fn test_labels_match_inplace() {
     let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
     let search = vec![
