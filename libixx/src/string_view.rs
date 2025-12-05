@@ -96,6 +96,7 @@ pub fn eq_ignore_ascii_case(a: &[u8], b: &[u8]) -> bool {
 }
 
 #[inline(always)]
+#[allow(clippy::manual_range_contains)]
 pub fn eq_ignore_ascii_case_char(a: u8, b: u8) -> bool {
   // Branchless check for ASCII alphabetic
   a == b
