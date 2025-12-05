@@ -272,26 +272,18 @@ impl Index {
   pub fn get_idx_by_name(&self, scope_id: u8, name: &str) -> Result<Option<usize>, IxxError> {
     let mut labels = Vec::new();
     for segment in name.split('.').map(str::as_bytes) {
-      'outer: {
-        for (
-          entry_idx,
-          Entry {
-            labels: inner_labels, ..
-          },
-        ) in self.entries.iter().enumerate()
-        {
-          for (label_idx, label) in inner_labels.iter().enumerate() {
-            if let Label::InPlace(inplace) = label {
-              if inplace != segment {
-                continue;
-              }
-
-              labels.push(Reference {
-                entry_idx: entry_idx as u64,
-                label_idx: label_idx as u8,
-              });
-              break 'outer;
+      'outer: for (entry_idx, entry) in self.entries.iter().enumerate() {
+        for (label_idx, label) in entry.labels.iter().enumerate() {
+          if let Label::InPlace(inplace) = label {
+            if inplace != segment {
+              continue;
             }
+
+            labels.push(Reference {
+              entry_idx: entry_idx as u64,
+              label_idx: label_idx as u8,
+            });
+            break 'outer;
           }
         }
 
