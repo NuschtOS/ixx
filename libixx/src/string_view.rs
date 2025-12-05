@@ -130,13 +130,13 @@ mod tests {
     let view = StringView::from((&index, index.entries[0].labels.as_slice()));
     // Match both segments
     let pattern = vec![vec![b"foo".as_ref()], vec![b"bar".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), true);
+    assert!(view.matches(&pattern).unwrap());
     // Match only first segment
     let pattern = vec![vec![b"foo".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), true);
+    assert!(view.matches(&pattern).unwrap());
     // No match
     let pattern = vec![vec![b"baz".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), false);
+    assert!(!view.matches(&pattern).unwrap());
   }
 
   #[test]
@@ -147,7 +147,7 @@ mod tests {
     ]);
     let view = StringView::from((&index, index.entries[0].labels.as_slice()));
     let pattern = vec![vec![b"foo".as_ref()], vec![b"bar".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), true);
+    assert!(view.matches(&pattern).unwrap());
   }
 
   #[test]
@@ -159,13 +159,13 @@ mod tests {
     let view = StringView::from((&index, index.entries[0].labels.as_slice()));
     // Partial match
     let pattern = vec![vec![b"foo".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), true);
+    assert!(view.matches(&pattern).unwrap());
     // Wildcard-like: match any segment
     let pattern = vec![vec![b"ba".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), true);
+    assert!(view.matches(&pattern).unwrap());
     // No match
     let pattern = vec![vec![b"qux".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), false);
+    assert!(!view.matches(&pattern).unwrap());
   }
 
   #[test]
@@ -173,7 +173,7 @@ mod tests {
     let index = make_index_with_labels(vec![Label::InPlace(b"foo".to_vec())]);
     let view = StringView::from((&index, index.entries[0].labels.as_slice()));
     let pattern: Vec<Vec<&[u8]>> = vec![];
-    assert_eq!(view.matches(&pattern).unwrap(), true);
+    assert!(view.matches(&pattern).unwrap());
   }
 
   #[test]
@@ -181,7 +181,7 @@ mod tests {
     let index = make_index_with_labels(vec![]);
     let view = StringView::from((&index, index.entries[0].labels.as_slice()));
     let pattern = vec![vec![b"foo".as_ref()]];
-    assert_eq!(view.matches(&pattern).unwrap(), false);
+    assert!(!view.matches(&pattern).unwrap());
   }
 
   #[test]
