@@ -19,11 +19,11 @@ pub struct IndexBuilder {
 #[brw(magic = b"ixx02")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Index {
-  meta: Meta,
+  pub(crate) meta: Meta,
   #[bw(calc = entries.len() as u32)]
   count: u32,
   #[br(count = count)]
-  entries: Vec<Entry>,
+  pub(crate) entries: Vec<Entry>,
 }
 
 #[binrw]
@@ -42,18 +42,18 @@ pub struct PascalString {
   #[bw(calc = data.len() as u8)]
   len: u8,
   #[br(count = len)]
-  data: Vec<u8>,
+  pub(crate) data: Vec<u8>,
 }
 
 #[binrw]
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct Entry {
   /// index in the scopes Vec
-  scope_id: u8,
+  pub(crate) scope_id: u8,
   #[bw(calc = labels.len() as u8)]
   count: u8,
   #[br(count = count)]
-  labels: Vec<Label>,
+  pub(crate) labels: Vec<Label>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

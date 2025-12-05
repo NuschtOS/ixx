@@ -106,7 +106,83 @@ pub fn eq_ignore_ascii_case_char(a: u8, b: u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-  use crate::string_view::{ascii_ignore_case_find, eq_ignore_ascii_case_char};
+  use crate::index::*;
+  use crate::string_view::*;
+
+  fn make_index_with_labels(labels: Vec<Label>) -> Index {
+    Index {
+      meta: Meta {
+        chunk_size: 1,
+        scopes: vec![PascalString {
+          data: b"scope".to_vec(),
+        }],
+      },
+      entries: vec![Entry { scope_id: 0, labels }],
+    }
+  }
+
+  #[test]
+  fn test_string_view_matches_simple() {
+    let index = make_index_with_labels(vec![
+      Label::InPlace(b"foo".to_vec()),
+      Label::InPlace(b"bar".to_vec()),
+    ]);
+    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    // Match both segments
+    let pattern = vec![vec![b"foo".as_ref()], vec![b"bar".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), true);
+    // Match only first segment
+    let pattern = vec![vec![b"foo".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), true);
+    // No match
+    let pattern = vec![vec![b"baz".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), false);
+  }
+
+  #[test]
+  fn test_string_view_matches_case_insensitive() {
+    let index = make_index_with_labels(vec![
+      Label::InPlace(b"Foo".to_vec()),
+      Label::InPlace(b"Bar".to_vec()),
+    ]);
+    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let pattern = vec![vec![b"foo".as_ref()], vec![b"bar".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), true);
+  }
+
+  #[test]
+  fn test_string_view_matches_partial_and_wildcard() {
+    let index = make_index_with_labels(vec![
+      Label::InPlace(b"foobar".to_vec()),
+      Label::InPlace(b"baz".to_vec()),
+    ]);
+    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    // Partial match
+    let pattern = vec![vec![b"foo".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), true);
+    // Wildcard-like: match any segment
+    let pattern = vec![vec![b"ba".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), true);
+    // No match
+    let pattern = vec![vec![b"qux".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), false);
+  }
+
+  #[test]
+  fn test_string_view_matches_empty_pattern() {
+    let index = make_index_with_labels(vec![Label::InPlace(b"foo".to_vec())]);
+    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let pattern: Vec<Vec<&[u8]>> = vec![];
+    assert_eq!(view.matches(&pattern).unwrap(), true);
+  }
+
+  #[test]
+  fn test_string_view_matches_empty_labels() {
+    let index = make_index_with_labels(vec![]);
+    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let pattern = vec![vec![b"foo".as_ref()]];
+    assert_eq!(view.matches(&pattern).unwrap(), false);
+  }
 
   #[test]
   fn test_ascii_ignore_case_find() {
