@@ -4,7 +4,7 @@
 , nodejs
 , rustc
 , wasm-pack
-, wasm-bindgen-cli_0_2_104
+, wasm-bindgen-cli_0_2_106
 , release ? true
 }:
 
@@ -25,7 +25,7 @@ rustPlatform.buildRustPackage rec {
     nodejs # for npm
     rustc.llvmPackages.lld
     wasm-pack
-    wasm-bindgen-cli_0_2_104
+    wasm-bindgen-cli_0_2_106
   ];
 
   buildPhase = ''

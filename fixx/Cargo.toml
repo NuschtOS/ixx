@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 libixx = { path = "../libixx" }
-wasm-bindgen = "=0.2.104"
+wasm-bindgen = "=0.2.106"
 
 # untill wasm-opt fixes it's stuff (caused by llvm update and new wasm features which was caused by rustc update)
 [package.metadata.wasm-pack.profile.release]
