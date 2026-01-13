@@ -488,6 +488,37 @@ mod tests {
   }
 
   #[test]
+  fn test_push_compression_inplace_different_position_reverse() {
+    let mut builder = IndexBuilder::new(1);
+    builder.push(0, "nixosTests.pretalx");
+    builder.push(0, "pretalx");
+    let index: Index = builder.into();
+
+    assert_eq!(index.entries.len(), 2);
+
+    assert_eq!(index.entries[0].labels.len(), 2);
+    match &index.entries[0].labels[0] {
+      Label::Reference(reference) => {
+        assert_eq!(reference.entry_idx, 0);
+        assert_eq!(reference.label_idx, 0);
+      }
+      Label::InPlace(label) => assert_eq!(label, b"nixosTests"),
+    }
+    match &index.entries[0].labels[1] {
+      Label::InPlace(label) => assert_eq!(label, b"pretalx"),
+      _ => unreachable!("Expected no InPlace label"),
+    }
+
+    assert_eq!(index.entries[1].labels.len(), 1);
+    match &index.entries[1].labels[0] {
+      Label::InPlace(label) => { // TODO!!! this should be a Reference!
+        assert_eq!(label, b"pretalx");
+      }
+      _ => unreachable!("Expected no Reference label"),
+    }
+  }
+
+  #[test]
   fn test_labels_match_inplace() {
     let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
     let search = vec![
