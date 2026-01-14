@@ -425,11 +425,11 @@ mod tests {
     assert_eq!(index.entries[0].labels.len(), 2);
     match &index.entries[0].labels[0] {
       Label::InPlace(label) => assert_eq!(label, b"foo"),
-      _ => unreachable!("Expected no Reference label"),
+      _ => unreachable!("Expected InPlace label"),
     }
     match &index.entries[0].labels[1] {
       Label::InPlace(label) => assert_eq!(label, b"bar"),
-      _ => unreachable!("Expected no Reference label"),
+      _ => unreachable!("Expected InPlace label"),
     }
 
     assert_eq!(index.entries[1].labels.len(), 2);
@@ -438,7 +438,7 @@ mod tests {
         assert_eq!(reference.entry_idx, 0);
         assert_eq!(reference.label_idx, 0);
       }
-      _ => unreachable!("Expected no InPlace label"),
+      _ => unreachable!("Expected Reference label"),
     }
     match &index.entries[1].labels[1] {
       Label::InPlace(label) => assert_eq!(label, b"buz"),
@@ -461,7 +461,7 @@ mod tests {
     assert_eq!(index.entries[0].labels.len(), 1);
     match &index.entries[0].labels[0] {
       Label::InPlace(label) => assert_eq!(label, b"pretalx"),
-      _ => unreachable!("Expected no Reference label"),
+      _ => unreachable!("Expected InPlace label"),
     }
 
     assert_eq!(index.entries[1].labels.len(), 2);
@@ -476,7 +476,7 @@ mod tests {
       Label::Reference(reference) => {
         assert_eq!(reference.entry_idx, 0);
       }
-      _ => unreachable!("Expected no InPlace label"),
+      _ => unreachable!("Expected Reference label"),
     }
   }
 
@@ -492,7 +492,7 @@ mod tests {
     assert_eq!(index.entries[0].labels.len(), 2);
     match &index.entries[0].labels[0] {
       Label::InPlace(label) => assert_eq!(label, b"nixosTests"),
-      _ => unreachable!("Expected Reference label"),
+      _ => unreachable!("Expected InPlace label"),
     }
     match &index.entries[0].labels[1] {
       Label::InPlace(label) => assert_eq!(label, b"pretalx"),
@@ -505,7 +505,7 @@ mod tests {
         assert_eq!(reference.entry_idx, 0);
         assert_eq!(reference.label_idx, 1);
       }
-      _ => unreachable!("Expected no Reference label"),
+      _ => unreachable!("Expected Reference label"),
     }
   }
 
