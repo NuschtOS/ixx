@@ -195,33 +195,26 @@ impl IndexBuilder {
 
   pub fn push(&mut self, scope_id: u8, name: &str) {
     // optimize, if there is no dot in the name, compression does not make sense
-    let labels = if name.contains('.') {
-      name
-        .split('.')
-        .enumerate()
-        .map(|(label_idx, segment)| {
-          let segment = segment.as_bytes();
+    let labels = name
+      .split('.')
+      .enumerate()
+      .map(|(label_idx, segment)| {
+        let segment = segment.as_bytes();
 
-          if let Some((entry_idx, label_idx)) = self.label_cache.get(segment) {
-            return Label::Reference(Reference {
-              entry_idx: *entry_idx as u64,
-              label_idx: *label_idx,
-            });
-          }
+        if let Some((entry_idx, label_idx)) = self.label_cache.get(segment) {
+          return Label::Reference(Reference {
+            entry_idx: *entry_idx as u64,
+            label_idx: *label_idx,
+          });
+        }
 
-          self
-            .label_cache
-            .insert(segment.to_vec(), (self.index.entries.len(), label_idx as u8));
+        self
+          .label_cache
+          .insert(segment.to_vec(), (self.index.entries.len(), label_idx as u8));
 
-          Label::InPlace(segment.to_vec())
-        })
-        .collect()
-    } else {
-      self
-        .label_cache
-        .insert(name.as_bytes().to_vec(), (self.index.entries.len(), 0));
-      vec![Label::InPlace(name.into())]
-    };
+        Label::InPlace(segment.to_vec())
+      })
+      .collect();
 
     self.index.entries.push(Entry { scope_id, labels });
   }
@@ -498,21 +491,19 @@ mod tests {
 
     assert_eq!(index.entries[0].labels.len(), 2);
     match &index.entries[0].labels[0] {
-      Label::Reference(reference) => {
-        assert_eq!(reference.entry_idx, 0);
-        assert_eq!(reference.label_idx, 0);
-      }
       Label::InPlace(label) => assert_eq!(label, b"nixosTests"),
+      _ => unreachable!("Expected Reference label"),
     }
     match &index.entries[0].labels[1] {
       Label::InPlace(label) => assert_eq!(label, b"pretalx"),
-      _ => unreachable!("Expected no InPlace label"),
+      _ => unreachable!("Expected InPlace label"),
     }
 
     assert_eq!(index.entries[1].labels.len(), 1);
     match &index.entries[1].labels[0] {
-      Label::InPlace(label) => { // TODO!!! this should be a Reference!
-        assert_eq!(label, b"pretalx");
+      Label::Reference(reference) => {
+        assert_eq!(reference.entry_idx, 0);
+        assert_eq!(reference.label_idx, 1);
       }
       _ => unreachable!("Expected no Reference label"),
     }
