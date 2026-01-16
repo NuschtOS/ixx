@@ -52,7 +52,6 @@ pub struct Package {
 // https://github.com/NixOS/nixpkgs/blob/master/doc/stdenv/meta.chapter.md#source-provenance-sec-meta-sourceprovenance
 #[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
-#[serde(untagged)]
 pub enum SourceProvenance {
   FromSource,
   BinaryNativeCode,
