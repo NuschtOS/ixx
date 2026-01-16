@@ -234,6 +234,7 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
     pname: package.pname,
     possible_cpes: package.possible_cpes.unwrap_or_default(),
     purl: package.purl,
+    source_provenance: package.source_provenance.unwrap_or_default(),
     teams: package.teams.unwrap_or_default(),
     version: package.version,
   })

@@ -42,7 +42,20 @@ pub struct Package {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub purl: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub source_provenance: Vec<SourceProvenance>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
   pub teams: Vec<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub version: Option<String>,
+}
+
+// https://github.com/NixOS/nixpkgs/blob/master/doc/stdenv/meta.chapter.md#source-provenance-sec-meta-sourceprovenance
+#[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum SourceProvenance {
+  FromSource,
+  BinaryNativeCode,
+  BinaryFirmware,
+  BinaryBytecode,
 }
