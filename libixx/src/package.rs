@@ -7,8 +7,8 @@ pub struct Package {
   pub attr_name: String,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub broken: Option<bool>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub changelog: Option<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub changelogs: Vec<Url>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub cpe: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]

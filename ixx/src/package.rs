@@ -7,7 +7,7 @@ use crate::Declaration;
 pub struct Package {
   pub attr_name: String,
   pub broken: Option<bool>,
-  pub changelog: Option<String>,
+  pub changelog: Option<OneOrMany<String>>,
   pub cpe: Option<String>,
   pub declaration: Option<Declaration>,
   pub description: Option<String>,

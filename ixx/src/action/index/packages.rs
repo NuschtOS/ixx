@@ -161,27 +161,8 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
   Ok(())
 }
 
-fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<libixx::Package> {
-  static CVE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"CVE-(\d{4})-(\d+)").unwrap());
-  static GHSA_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"GHSA((?:-[23456789cfghjmpqrvwx]{4}){3})").unwrap());
-
-  Ok(libixx::Package {
-    attr_name: package.attr_name,
-    broken: package.broken,
-    changelog: package.changelog,
-    cpe: package.cpe,
-    declaration: package
-      .declaration
-      .map(|declaration| update_declaration(url_prefix, declaration))
-      .transpose()?,
-    description: package
-      .description
-      .map(|description| markdown::to_html(&description)),
-    disabled: package.disabled,
-    download_page: package.download_page,
-    eval_error: package.eval_error,
-    homepages: match package.homepage {
+fn one_or_many_to_url(something: Option<OneOrMany<String>>) -> Vec<Url> {
+    match something {
       None => vec![],
       Some(OneOrMany::One(homepage)) => Url::parse(&homepage)
         .with_context(|| format!("Failed to parse URL '{homepage}'"))
@@ -196,7 +177,30 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
             .ok()
         })
         .collect(),
-    },
+    }
+}
+
+fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<libixx::Package> {
+  static CVE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"CVE-(\d{4})-(\d+)").unwrap());
+  static GHSA_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"GHSA((?:-[23456789cfghjmpqrvwx]{4}){3})").unwrap());
+
+  Ok(libixx::Package {
+    attr_name: package.attr_name,
+    broken: package.broken,
+    changelogs: one_or_many_to_url(package.changelog),
+    cpe: package.cpe,
+    declaration: package
+      .declaration
+      .map(|declaration| update_declaration(url_prefix, declaration))
+      .transpose()?,
+    description: package
+      .description
+      .map(|description| markdown::to_html(&description)),
+    disabled: package.disabled,
+    download_page: package.download_page,
+    eval_error: package.eval_error,
+    homepages: one_or_many_to_url(package.homepage),
     known_vulnerabilities: package
       .known_vulnerabilities
       .unwrap_or_default()
