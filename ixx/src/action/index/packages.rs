@@ -169,10 +169,8 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
   Ok(libixx::Package {
     attr_name: package.attr_name,
     broken: package.broken,
+    changelog: package.changelog,
     cpe: package.cpe,
-    disabled: package.disabled,
-    possible_cpes: package.possible_cpes.unwrap_or_default(),
-    purl: package.purl,
     declaration: package
       .declaration
       .map(|declaration| update_declaration(url_prefix, declaration))
@@ -180,9 +178,8 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
     description: package
       .description
       .map(|description| markdown::to_html(&description)),
-    long_description: package
-      .long_description
-      .map(|description| markdown::to_html(&description)),
+    disabled: package.disabled,
+    download_page: package.download_page,
     eval_error: package.eval_error,
     homepages: match package.homepage {
       None => vec![],
@@ -224,10 +221,15 @@ fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<l
       })
       .collect(),
     licenses: package.licenses.unwrap_or_default(),
+    long_description: package
+      .long_description
+      .map(|description| markdown::to_html(&description)),
     maintainers: package.maintainers.unwrap_or_default(),
     name: package.name,
     outputs: package.outputs.unwrap_or_default(),
     pname: package.pname,
+    possible_cpes: package.possible_cpes.unwrap_or_default(),
+    purl: package.purl,
     teams: package.teams.unwrap_or_default(),
     version: package.version,
   })

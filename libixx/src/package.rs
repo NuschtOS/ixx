@@ -8,19 +8,17 @@ pub struct Package {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub broken: Option<bool>,
   #[serde(skip_serializing_if = "Option::is_none")]
+  pub changelog: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub cpe: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub disabled: Option<bool>,
-  #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub possible_cpes: Vec<String>,
-  #[serde(skip_serializing_if = "Option::is_none")]
-  pub purl: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub declaration: Option<Url>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub description: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub long_description: Option<String>,
+  pub download_page: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub eval_error: Option<bool>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -29,6 +27,8 @@ pub struct Package {
   pub known_vulnerabilities: Vec<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub licenses: Vec<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub long_description: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub maintainers: Vec<u32>,
   #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,6 +37,10 @@ pub struct Package {
   pub outputs: Vec<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub pname: Option<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub possible_cpes: Vec<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub purl: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub teams: Vec<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
