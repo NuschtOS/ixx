@@ -1,3 +1,4 @@
+use libixx::SourceProvenance;
 use serde::Deserialize;
 
 use crate::Declaration;
@@ -24,7 +25,7 @@ pub struct Package {
   pub pname: Option<String>,
   pub possible_cpes: Option<Vec<String>>,
   pub purl: Option<String>,
-  pub source_provenance: Option<Vec<libixx::SourceProvenance>>,
+  pub source_provenance: Option<Vec<SourceProvenance>>,
   pub teams: Option<Vec<String>>,
   pub version: Option<String>,
 }
