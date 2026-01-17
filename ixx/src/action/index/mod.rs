@@ -48,8 +48,8 @@ struct PackageEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct License {
-  free: bool,
-  full_name: String,
+  free: Option<bool>,
+  full_name: Option<String>,
   redistributable: bool,
   spdx_id: Option<String>,
   url: Option<Url>,

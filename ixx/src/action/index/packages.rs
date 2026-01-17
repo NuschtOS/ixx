@@ -162,22 +162,22 @@ pub(crate) async fn index_packages(module: &IndexModule, config: &Config) -> any
 }
 
 fn one_or_many_to_url(something: Option<OneOrMany<String>>) -> Vec<Url> {
-    match something {
-      None => vec![],
-      Some(OneOrMany::One(homepage)) => Url::parse(&homepage)
-        .with_context(|| format!("Failed to parse URL '{homepage}'"))
-        .ok()
-        .into_iter()
-        .collect(),
-      Some(OneOrMany::Many(homepages)) => homepages
-        .into_iter()
-        .filter_map(|homepage| {
-          Url::parse(&homepage)
-            .with_context(|| format!("Failed to parse URL '{homepage}'"))
-            .ok()
-        })
-        .collect(),
-    }
+  match something {
+    None => vec![],
+    Some(OneOrMany::One(homepage)) => Url::parse(&homepage)
+      .with_context(|| format!("Failed to parse URL '{homepage}'"))
+      .ok()
+      .into_iter()
+      .collect(),
+    Some(OneOrMany::Many(homepages)) => homepages
+      .into_iter()
+      .filter_map(|homepage| {
+        Url::parse(&homepage)
+          .with_context(|| format!("Failed to parse URL '{homepage}'"))
+          .ok()
+      })
+      .collect(),
+  }
 }
 
 fn into_package(url_prefix: &Url, package: package::Package) -> anyhow::Result<libixx::Package> {
