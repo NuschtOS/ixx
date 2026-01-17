@@ -1,7 +1,7 @@
 pub use error::IxxError;
 pub use index::{Index, IndexBuilder};
 pub use option::Option;
-pub use package::{Package, SourceProvenance};
+pub use package::{License, Package, SourceProvenance};
 
 mod error;
 mod index;

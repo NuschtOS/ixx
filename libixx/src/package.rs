@@ -26,7 +26,7 @@ pub struct Package {
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub known_vulnerabilities: Vec<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
-  pub licenses: Vec<String>,
+  pub licenses: Vec<License>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub long_description: Option<String>,
   #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -49,8 +49,18 @@ pub struct Package {
   pub version: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct License {
+  pub free: Option<bool>,
+  pub full_name: Option<String>,
+  pub redistributable: Option<bool>,
+  pub short_name: Option<String>,
+  pub url: Option<Url>,
+}
+
 // https://github.com/NixOS/nixpkgs/blob/master/doc/stdenv/meta.chapter.md#source-provenance-sec-meta-sourceprovenance
-#[derive(Debug, Clone, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub enum SourceProvenance {
   FromSource,

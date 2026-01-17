@@ -1,6 +1,7 @@
 use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::Context;
+use libixx::License;
 use serde::{Deserialize, Serialize};
 use tokio::{fs::File, io::AsyncWriteExt, join};
 use url::Url;
@@ -42,17 +43,7 @@ struct OptionEntry {
 struct PackageEntry {
   name: String,
   scope: u8,
-  option: libixx::Package,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
-struct License {
-  free: Option<bool>,
-  full_name: Option<String>,
-  redistributable: bool,
-  spdx_id: Option<String>,
-  url: Option<Url>,
+  package: libixx::Package,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,7 +68,7 @@ struct Meta {
   scopes: HashMap<u8, ScopeMeta>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct ScopeMeta {
   licenses: HashMap<String, License>,
@@ -94,40 +85,41 @@ pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
       .with_context(|| format!("Failed to parse config file: {}", module.config.to_string_lossy()))?
   };
 
-  let (options_result, packages_result, meta_result) = join!(
+  let mut meta = Meta {
+    scopes: config
+      .scopes
+      .iter()
+      .enumerate()
+      .map(|(idx, scope)| {
+        (
+          idx as u8,
+          ScopeMeta {
+            licenses: scope.license_mapping.clone(),
+            maintainers: scope.maintainer_mapping.clone(),
+            teams: scope.team_mapping.clone(),
+          },
+        )
+      })
+      .collect(),
+  };
+
+  let (options_result, packages_result) = join!(
     index_options(&module, &config),
-    index_packages(&module, &config),
-    async {
-      let meta = Meta {
-        scopes: config
-          .scopes
-          .iter()
-          .enumerate()
-          .map(|(idx, scope)| {
-            (
-              idx as u8,
-              ScopeMeta {
-                licenses: scope.license_mapping.clone(),
-                maintainers: scope.maintainer_mapping.clone(),
-                teams: scope.team_mapping.clone(),
-              },
-            )
-          })
-          .collect(),
-      };
-
-      let raw_meta = serde_json::to_string(&meta)?;
-      let mut meta_file = File::create(&module.meta_output).await?;
-
-      meta_file.write_all(raw_meta.as_bytes()).await?;
-
-      Ok::<_, anyhow::Error>(())
-    }
+    index_packages(&module, &meta, &config),
   );
-
   options_result?;
-  packages_result?;
-  meta_result?;
+
+  let all_extra_licenses = packages_result?;
+  all_extra_licenses.into_iter().for_each(|(idx, licenses)| {
+    if let Some(scope_meta) = meta.scopes.get_mut(&idx) {
+        scope_meta.licenses.extend(licenses);
+    }
+  });
+
+  let raw_meta = serde_json::to_string(&meta)?;
+  let mut meta_file = File::create(&module.meta_output).await?;
+
+  meta_file.write_all(raw_meta.as_bytes()).await?;
 
   Ok(())
 }

@@ -1,4 +1,4 @@
-use libixx::SourceProvenance;
+use libixx::{License, SourceProvenance};
 use serde::Deserialize;
 
 use crate::Declaration;
@@ -17,7 +17,7 @@ pub struct Package {
   pub eval_error: Option<bool>,
   pub homepage: Option<OneOrMany<String>>,
   pub known_vulnerabilities: Option<Vec<String>>,
-  pub licenses: Option<Vec<String>>,
+  pub licenses: Option<Vec<License>>,
   pub long_description: Option<String>,
   pub maintainers: Option<Vec<u32>>,
   pub name: Option<String>,
