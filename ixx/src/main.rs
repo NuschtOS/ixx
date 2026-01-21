@@ -16,7 +16,6 @@ async fn main() -> anyhow::Result<()> {
   match args.action {
     Action::Index(module) => action::index::index(module).await,
     Action::Search(module) => action::search::search(module),
-    Action::Meta(module) => action::meta::meta(module),
   }?;
 
   Ok(())

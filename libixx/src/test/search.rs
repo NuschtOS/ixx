@@ -2,8 +2,7 @@ use crate::{Index, IndexBuilder};
 
 #[test]
 fn test() {
-  // chunk_size does not really matter here currently
-  let mut index_builder = IndexBuilder::new(100);
+  let mut index_builder = IndexBuilder::default();
 
   index_builder.push(0, "home.enableDebugInfo");
   index_builder.push(0, "home.enableNixpkgsReleaseCheck");

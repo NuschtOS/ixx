@@ -14,9 +14,9 @@ use crate::{
 pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyhow::Result<()> {
   let mut raw_options: Vec<OptionEntry> = vec![];
 
-  let mut index_builder = IndexBuilder::new(module.chunk_size);
+  let mut index_builder = IndexBuilder::default();
 
-  for scope in &config.scopes {
+  for (scope_idx, scope) in config.scopes.iter().enumerate() {
     let options_json = match &scope.options_json {
       Some(options_jsons) => options_jsons,
       None => {
@@ -32,13 +32,6 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
       serde_json::from_str(&raw_options)
         .with_context(|| format!("Failed to parse options json: {}", options_json.to_string_lossy()))?
     };
-
-    let scope_idx = index_builder.push_scope(
-      scope
-        .name
-        .as_ref()
-        .map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
-    );
 
     for (name, option) in options {
       // internal options which cannot be hidden when importing existing options.json
@@ -61,7 +54,7 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
 
       raw_options.push(OptionEntry {
         name,
-        scope: scope_idx,
+        scope: scope_idx as u8,
         option,
       });
     }

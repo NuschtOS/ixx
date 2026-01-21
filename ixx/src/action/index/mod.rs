@@ -112,7 +112,7 @@ pub(crate) async fn index(module: IndexModule) -> anyhow::Result<()> {
   let all_extra_licenses = packages_result?;
   all_extra_licenses.into_iter().for_each(|(idx, licenses)| {
     if let Some(scope_meta) = meta.scopes.get_mut(&idx) {
-        scope_meta.licenses.extend(licenses);
+      scope_meta.licenses.extend(licenses);
     }
   });
 

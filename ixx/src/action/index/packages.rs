@@ -23,9 +23,9 @@ pub(crate) async fn index_packages(
 ) -> anyhow::Result<HashMap<u8, HashMap<String, License>>> {
   let mut raw_packages = Vec::<PackageEntry>::new();
   let mut all_extra_licenses = HashMap::<u8, HashMap<String, License>>::new();
-  let mut index_builder = IndexBuilder::new(module.chunk_size);
+  let mut index_builder = IndexBuilder::default();
 
-  for scope in &config.scopes {
+  for (scope_idx, scope) in config.scopes.iter().enumerate() {
     let packages_jsons = match &scope.packages_jsons {
       Some(packages_jsons) => packages_jsons,
       None => {
@@ -33,19 +33,12 @@ pub(crate) async fn index_packages(
       }
     };
 
-    let scope_idx = index_builder.push_scope(
-      scope
-        .name
-        .as_ref()
-        .map_or_else(|| scope.url_prefix.to_string(), ToString::to_string),
-    );
-
     let mut join_set = JoinSet::new();
 
     let url_prefix = Arc::new(scope.url_prefix.clone());
 
     for packages_json in packages_jsons {
-      let scope_meta = meta.scopes[&scope_idx].clone();
+      let scope_meta = meta.scopes[&(scope_idx as u8)].clone();
       let packages_json = packages_json.clone();
       let url_prefix = url_prefix.clone();
 
@@ -74,7 +67,7 @@ pub(crate) async fn index_packages(
             extra_licenses.extend(extras);
             Ok::<_, anyhow::Error>(PackageEntry {
               name: pkg.attr_name.clone(),
-              scope: scope_idx,
+              scope: scope_idx as u8,
               package: pkg,
             })
           })
@@ -86,7 +79,7 @@ pub(crate) async fn index_packages(
       while let Some(result) = join_set.join_next().await {
         let (pkgs, extras) = result??;
         raw_packages.extend(pkgs);
-        if let Some(val) = all_extra_licenses.get_mut(&scope_idx) {
+        if let Some(val) = all_extra_licenses.get_mut(&(scope_idx as u8)) {
           val.extend(extras);
         };
       }

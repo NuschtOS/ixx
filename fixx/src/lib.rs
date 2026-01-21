@@ -1,5 +1,3 @@
-use std::string::FromUtf8Error;
-
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -17,22 +15,6 @@ impl Index {
   pub fn read(buf: Vec<u8>) -> Result<Self, String> {
     libixx::Index::read(&buf)
       .map(Self)
-      .map_err(|err| format!("{err:?}"))
-  }
-
-  #[must_use]
-  pub fn chunk_size(&self) -> u32 {
-    self.0.meta().chunk_size
-  }
-
-  pub fn scopes(&self) -> Result<Vec<String>, String> {
-    self
-      .0
-      .meta()
-      .scopes
-      .iter()
-      .map(|scope| String::try_from(scope.clone()))
-      .collect::<Result<Vec<String>, FromUtf8Error>>()
       .map_err(|err| format!("{err:?}"))
   }
 

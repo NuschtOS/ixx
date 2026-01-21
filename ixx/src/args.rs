@@ -13,8 +13,6 @@ pub(super) enum Action {
   Index(IndexModule),
   #[clap(about = "Search the index for packages or options")]
   Search(SearchModule),
-  #[clap(about = "Show index metadata")]
-  Meta(MetaModule),
 }
 
 #[derive(ValueEnum, Clone)]

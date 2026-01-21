@@ -2,7 +2,7 @@ use crate::{Index, IndexBuilder};
 
 #[test]
 fn test_get_idx_by_name_one_level() {
-  let mut index_builder = IndexBuilder::new(100);
+  let mut index_builder = IndexBuilder::default();
 
   index_builder.push(0, "a");
   index_builder.push(0, "b");
@@ -29,7 +29,7 @@ fn test_get_idx_by_name_one_level() {
 
 #[test]
 fn test_get_idx_by_name_complex() {
-  let mut index_builder = IndexBuilder::new(100);
+  let mut index_builder = IndexBuilder::default();
 
   index_builder.push(0, "home.enableDebugInfo");
   index_builder.push(0, "home.enableNixpkgsReleaseCheck");

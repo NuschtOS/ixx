@@ -19,21 +19,10 @@ pub struct IndexBuilder {
 #[brw(magic = b"ixx02")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Index {
-  pub(crate) meta: Meta,
   #[bw(calc = entries.len() as u32)]
   count: u32,
   #[br(count = count)]
   pub(crate) entries: Vec<Entry>,
-}
-
-#[binrw]
-#[derive(Debug, Clone, PartialEq)]
-pub struct Meta {
-  pub chunk_size: u32,
-  #[bw(calc = scopes.len() as u8)]
-  scope_count: u8,
-  #[br(count = scope_count)]
-  pub scopes: Vec<PascalString>,
 }
 
 #[binrw]
@@ -178,21 +167,16 @@ impl TryFrom<PascalString> for String {
   }
 }
 
-impl IndexBuilder {
-  #[must_use]
-  pub fn new(chunk_size: u32) -> Self {
+impl Default for IndexBuilder {
+  fn default() -> Self {
     Self {
-      index: Index {
-        meta: Meta {
-          chunk_size,
-          scopes: vec![],
-        },
-        entries: vec![],
-      },
+      index: Index { entries: vec![] },
       label_cache: HashMap::new(),
     }
   }
+}
 
+impl IndexBuilder {
   pub fn push(&mut self, scope_id: u8, name: &str) {
     // optimize, if there is no dot in the name, compression does not make sense
     let labels = name
@@ -217,17 +201,6 @@ impl IndexBuilder {
       .collect();
 
     self.index.entries.push(Entry { scope_id, labels });
-  }
-
-  pub fn push_scope(&mut self, scope: String) -> u8 {
-    assert!(
-      self.index.meta.scopes.len() != u8::MAX as usize,
-      "You reached the limit of 256 scopes. Please contact the developers for further assistance."
-    );
-
-    let idx = self.index.meta.scopes.len();
-    self.index.meta.scopes.push(scope.into());
-    idx as u8
   }
 }
 
@@ -360,11 +333,6 @@ impl Index {
   }
 
   #[must_use]
-  pub fn meta(&self) -> &Meta {
-    &self.meta
-  }
-
-  #[must_use]
   pub fn size(&self) -> usize {
     self.entries.len()
   }
@@ -397,7 +365,7 @@ mod tests {
 
   #[test]
   fn test_push_one_entry() {
-    let mut builder = IndexBuilder::new(1);
+    let mut builder = IndexBuilder::default();
     builder.push(0, "foo.bar");
     let index: Index = builder.into();
 
@@ -415,7 +383,7 @@ mod tests {
 
   #[test]
   fn test_push_two_entries_with_compression() {
-    let mut builder = IndexBuilder::new(1);
+    let mut builder = IndexBuilder::default();
     builder.push(0, "foo.bar");
     builder.push(0, "foo.buz");
     let index: Index = builder.into();
@@ -451,7 +419,7 @@ mod tests {
 
   #[test]
   fn test_push_compression_inplace_different_position() {
-    let mut builder = IndexBuilder::new(1);
+    let mut builder = IndexBuilder::default();
     builder.push(0, "pretalx");
     builder.push(0, "nixosTests.pretalx");
     let index: Index = builder.into();
@@ -482,7 +450,7 @@ mod tests {
 
   #[test]
   fn test_push_compression_inplace_different_position_reverse() {
-    let mut builder = IndexBuilder::new(1);
+    let mut builder = IndexBuilder::default();
     builder.push(0, "nixosTests.pretalx");
     builder.push(0, "pretalx");
     let index: Index = builder.into();
@@ -598,15 +566,7 @@ mod tests {
       scope_id: 0,
       labels: vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())],
     };
-    let index = Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"abc".to_vec(),
-        }],
-      },
-      entries: vec![entry],
-    };
+    let index = Index { entries: vec![entry] };
     let reference = Reference {
       entry_idx: 0,
       label_idx: 1,
@@ -626,12 +586,6 @@ mod tests {
       labels: vec![Label::InPlace(b"bar".to_vec()), Label::InPlace(b"baz".to_vec())],
     };
     let index = Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"abc".to_vec(),
-        }],
-      },
       entries: vec![entry1, entry2],
     };
     let reference = Reference {
@@ -654,15 +608,7 @@ mod tests {
         Label::InPlace(b"real".to_vec()),
       ],
     };
-    let index = Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"abc".to_vec(),
-        }],
-      },
-      entries: vec![entry],
-    };
+    let index = Index { entries: vec![entry] };
     let reference = Reference {
       entry_idx: 0,
       label_idx: 1,
@@ -677,15 +623,7 @@ mod tests {
       scope_id: 0,
       labels: vec![Label::InPlace(b"foo".to_vec())],
     };
-    let index = Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"abc".to_vec(),
-        }],
-      },
-      entries: vec![entry],
-    };
+    let index = Index { entries: vec![entry] };
     let reference = Reference {
       entry_idx: 1,
       label_idx: 0,
@@ -700,15 +638,7 @@ mod tests {
       scope_id: 0,
       labels: vec![Label::InPlace(b"foo".to_vec())],
     };
-    let index = Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"abc".to_vec(),
-        }],
-      },
-      entries: vec![entry],
-    };
+    let index = Index { entries: vec![entry] };
     let reference = Reference {
       entry_idx: 0,
       label_idx: 1,
@@ -726,15 +656,7 @@ mod tests {
         label_idx: 0,
       })],
     };
-    let index = Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"abc".to_vec(),
-        }],
-      },
-      entries: vec![entry],
-    };
+    let index = Index { entries: vec![entry] };
     let reference = Reference {
       entry_idx: 0,
       label_idx: 0,

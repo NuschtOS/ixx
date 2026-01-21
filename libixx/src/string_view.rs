@@ -112,12 +112,6 @@ mod tests {
 
   fn make_index_with_labels(labels: Vec<Label>) -> Index {
     Index {
-      meta: Meta {
-        chunk_size: 1,
-        scopes: vec![PascalString {
-          data: b"scope".to_vec(),
-        }],
-      },
       entries: vec![Entry { scope_id: 0, labels }],
     }
   }
