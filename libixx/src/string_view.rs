@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
-use crate::{Index, IxxError, index::Label};
+use crate::{Index, IxxError, index::LabelReference};
 
 pub struct StringView<'a, 'b> {
   index: &'a Index,
-  parts: &'b [Label],
+  parts: &'b [LabelReference],
 }
 
-impl<'a, 'b> From<(&'a Index, &'b [Label])> for StringView<'a, 'b> {
-  fn from((index, parts): (&'a Index, &'b [Label])) -> Self {
+impl<'a, 'b> From<(&'a Index, &'b [LabelReference])> for StringView<'a, 'b> {
+  fn from((index, parts): (&'a Index, &'b [LabelReference])) -> Self {
     Self { index, parts }
   }
 }
@@ -19,20 +19,13 @@ impl Display for StringView<'_, '_> {
       return Ok(());
     }
 
-    let part = match &self.parts[0] {
-      Label::InPlace(items) => items,
-      Label::Reference(reference) => self.index.resolve_reference(reference).unwrap(),
-    };
+    let part = self.index.resolve_reference(self.parts[0]).unwrap();
 
-    write!(f, "{}", std::str::from_utf8(part).unwrap())?;
+    write!(f, "{}", std::str::from_utf8(&part.data).unwrap())?;
 
     for part in &self.parts[1..] {
-      let part = match &part {
-        Label::InPlace(items) => items,
-        Label::Reference(reference) => self.index.resolve_reference(reference).unwrap(),
-      };
-
-      write!(f, ".{}", std::str::from_utf8(part).unwrap())?;
+      let part = self.index.resolve_reference(*part).unwrap();
+      write!(f, ".{}", std::str::from_utf8(&part.data).unwrap())?;
     }
 
     Ok(())
@@ -48,12 +41,9 @@ impl StringView<'_, '_> {
       for part in segment {
         'outer: {
           for (self_part_idx, self_part) in self.parts[self_parts_start..].iter().enumerate() {
-            let self_part = match &self_part {
-              Label::InPlace(items) => items,
-              Label::Reference(reference) => self.index.resolve_reference(reference)?,
-            };
+            let self_part = self.index.resolve_reference(*self_part).unwrap();
 
-            if let Some(idx) = ascii_ignore_case_find(&self_part[self_parts_start_str_idx..], part) {
+            if let Some(idx) = ascii_ignore_case_find(&self_part.data[self_parts_start_str_idx..], part) {
               self_parts_start += self_part_idx;
               if self_part_idx == 0 {
                 self_parts_start_str_idx += idx;
@@ -110,19 +100,18 @@ mod tests {
   use crate::index::*;
   use crate::string_view::*;
 
-  fn make_index_with_labels(labels: Vec<Label>) -> Index {
+  fn make_index_with_labels(labels: Vec<PascalString>) -> Index {
     Index {
-      entries: vec![Entry { scope_id: 0, labels }],
+      labels,
+      entries: vec![],
     }
   }
 
   #[test]
   fn test_string_view_matches_simple() {
-    let index = make_index_with_labels(vec![
-      Label::InPlace(b"foo".to_vec()),
-      Label::InPlace(b"bar".to_vec()),
-    ]);
-    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let index = make_index_with_labels(vec!["foo".into(), "bar".into()]);
+    let entry = vec![LabelReference(0), LabelReference(1)];
+    let view = StringView::from((&index, entry.as_slice()));
     // Match both segments
     let pattern = vec![vec![b"foo".as_ref()], vec![b"bar".as_ref()]];
     assert!(view.matches(&pattern).unwrap());
@@ -136,22 +125,18 @@ mod tests {
 
   #[test]
   fn test_string_view_matches_case_insensitive() {
-    let index = make_index_with_labels(vec![
-      Label::InPlace(b"Foo".to_vec()),
-      Label::InPlace(b"Bar".to_vec()),
-    ]);
-    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let index = make_index_with_labels(vec!["Foo".into(), "Bar".into()]);
+    let entry = vec![LabelReference(0), LabelReference(1)];
+    let view = StringView::from((&index, entry.as_slice()));
     let pattern = vec![vec![b"foo".as_ref()], vec![b"bar".as_ref()]];
     assert!(view.matches(&pattern).unwrap());
   }
 
   #[test]
   fn test_string_view_matches_partial_and_wildcard() {
-    let index = make_index_with_labels(vec![
-      Label::InPlace(b"foobar".to_vec()),
-      Label::InPlace(b"baz".to_vec()),
-    ]);
-    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let index = make_index_with_labels(vec!["foobar".into(), "baz".into()]);
+    let entry = vec![LabelReference(0)];
+    let view = StringView::from((&index, entry.as_slice()));
     // Partial match
     let pattern = vec![vec![b"foo".as_ref()]];
     assert!(view.matches(&pattern).unwrap());
@@ -165,8 +150,9 @@ mod tests {
 
   #[test]
   fn test_string_view_matches_empty_pattern() {
-    let index = make_index_with_labels(vec![Label::InPlace(b"foo".to_vec())]);
-    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let index = make_index_with_labels(vec!["foo".into()]);
+    let entry = vec![LabelReference(0)];
+    let view = StringView::from((&index, entry.as_slice()));
     let pattern: Vec<Vec<&[u8]>> = vec![];
     assert!(view.matches(&pattern).unwrap());
   }
@@ -174,7 +160,8 @@ mod tests {
   #[test]
   fn test_string_view_matches_empty_labels() {
     let index = make_index_with_labels(vec![]);
-    let view = StringView::from((&index, index.entries[0].labels.as_slice()));
+    let entry = vec![];
+    let view = StringView::from((&index, entry.as_slice()));
     let pattern = vec![vec![b"foo".as_ref()]];
     assert!(!view.matches(&pattern).unwrap());
   }

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, io::Cursor};
 
 use anyhow::Context;
-use libixx::{Index, IndexBuilder};
+use libixx::Index;
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
 use url::Url;
 
@@ -13,8 +13,6 @@ use crate::{
 
 pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyhow::Result<()> {
   let mut raw_options: Vec<OptionEntry> = vec![];
-
-  let mut index_builder = IndexBuilder::default();
 
   for (scope_idx, scope) in config.scopes.iter().enumerate() {
     let options_json = match &scope.options_json {
@@ -69,9 +67,13 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   raw_options.sort_by(|a, b| a.name.cmp(&b.name));
 
   println!("Building options index");
-  for entry in &raw_options {
-    index_builder.push(entry.scope, &entry.name);
-  }
+  let index = Index::build(
+    raw_options
+      .iter()
+      .map(|entry| (entry.name.as_str(), entry.scope))
+      .collect::<Vec<_>>()
+      .as_slice(),
+  );
 
   println!(
     "Writing options index to {}",
@@ -79,12 +81,8 @@ pub(crate) async fn index_options(module: &IndexModule, config: &Config) -> anyh
   );
 
   {
-    let index_buf = {
-      let mut buf = Vec::new();
-      let index: Index = index_builder.into();
-      index.write_into(&mut Cursor::new(&mut buf))?;
-      buf
-    };
+    let mut index_buf = Vec::new();
+    index.write_into(&mut Cursor::new(&mut index_buf))?;
 
     let mut index_output = File::create(&module.options_index_output)
       .await

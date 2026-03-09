@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::Context;
-use libixx::{Index, IndexBuilder};
+use libixx::Index;
 use regex::{Captures, Regex};
 use tokio::{fs::File, io::AsyncWriteExt, task::JoinSet};
 use url::Url;
@@ -23,7 +23,6 @@ pub(crate) async fn index_packages(
 ) -> anyhow::Result<HashMap<u8, HashMap<String, License>>> {
   let mut raw_packages = Vec::<PackageEntry>::new();
   let mut all_extra_licenses = HashMap::<u8, HashMap<String, License>>::new();
-  let mut index_builder = IndexBuilder::default();
 
   for (scope_idx, scope) in config.scopes.iter().enumerate() {
     let packages_jsons = match &scope.packages_jsons {
@@ -94,9 +93,13 @@ pub(crate) async fn index_packages(
   println!("Sorting packages");
   raw_packages.sort_by(|a, b| a.name.cmp(&b.name));
 
-  for entry in &raw_packages {
-    index_builder.push(entry.scope, &entry.name);
-  }
+  let index = Index::build(
+    raw_packages
+      .iter()
+      .map(|entry| (entry.name.as_str(), entry.scope))
+      .collect::<Vec<_>>()
+      .as_slice(),
+  );
 
   println!(
     "Writing packages index to {}",
@@ -104,12 +107,8 @@ pub(crate) async fn index_packages(
   );
 
   {
-    let index_buf = {
-      let mut buf = Vec::new();
-      let index: Index = index_builder.into();
-      index.write_into(&mut Cursor::new(&mut buf))?;
-      buf
-    };
+    let mut index_buf = Vec::new();
+    index.write_into(&mut Cursor::new(&mut index_buf))?;
 
     let mut index_output = File::create(&module.packages_index_output)
       .await

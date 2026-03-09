@@ -1,5 +1,5 @@
 pub use error::IxxError;
-pub use index::{Index, IndexBuilder};
+pub use index::Index;
 pub use option::Option;
 pub use package::{License, Package, SourceProvenance};
 

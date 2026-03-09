@@ -46,10 +46,8 @@ impl Index {
     let name_str = name
       .as_string()
       .ok_or_else(|| "Invalid name: expected a string".to_string())?;
-    self
-      .0
-      .get_idx_by_name(scope_id, &name_str)
-      .map_err(|err| format!("{err:?}"))
+
+    Ok(self.0.get_idx_by_name(scope_id, &name_str))
   }
 
   #[must_use]

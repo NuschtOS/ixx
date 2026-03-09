@@ -24,7 +24,6 @@ pub(crate) struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub(crate) struct Scope {
-  name: Option<String>,
   license_mapping: HashMap<String, License>,
   maintainer_mapping: HashMap<u32, Maintainer>,
   team_mapping: HashMap<String, Team>,

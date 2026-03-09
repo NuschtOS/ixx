@@ -4,24 +4,23 @@ use std::{
   string::FromUtf8Error,
 };
 
-use binrw::{BinRead, BinWrite, Endian, VecArgs, binrw};
+use binrw::{BinRead, BinWrite, Endian, binrw};
 
 use levenshtein::levenshtein;
 
 use crate::{IxxError, string_view::StringView};
 
-pub struct IndexBuilder {
-  index: Index,
-  label_cache: HashMap<Vec<u8>, (usize, u8)>,
-}
-
 #[binrw]
 #[brw(magic = b"ixx02")]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Index {
+  #[bw(calc = labels.len() as u32)]
+  label_count: u32,
+  #[br(count = label_count)]
+  pub(crate) labels: Vec<PascalString>,
   #[bw(calc = entries.len() as u32)]
-  count: u32,
-  #[br(count = count)]
+  entry_count: u32,
+  #[br(count = entry_count)]
   pub(crate) entries: Vec<Entry>,
 }
 
@@ -40,24 +39,15 @@ pub struct Entry {
   /// index in the scopes Vec
   pub(crate) scope_id: u8,
   #[bw(calc = labels.len() as u8)]
-  count: u8,
-  #[br(count = count)]
-  pub(crate) labels: Vec<Label>,
+  label_count: u8,
+  #[br(count = label_count)]
+  pub(crate) labels: Vec<LabelReference>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Label {
-  InPlace(Vec<u8>),
-  Reference(Reference),
-}
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct LabelReference(pub u64);
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Reference {
-  entry_idx: u64,
-  label_idx: u8,
-}
-
-impl BinRead for Label {
+impl BinRead for LabelReference {
   type Args<'a> = ();
 
   fn read_options<R: Read + Seek>(
@@ -67,44 +57,20 @@ impl BinRead for Label {
   ) -> binrw::BinResult<Self> {
     let first = u8::read_options(reader, endian, ())?;
 
-    if first & (1 << 7) == 0 {
-      let buf = Vec::<u8>::read_options(
-        reader,
-        endian,
-        VecArgs {
-          count: first as usize,
-          inner: (),
-        },
-      )?;
-
-      return Ok(Self::InPlace(buf));
-    }
-
-    let label_idx = first & (u8::MAX >> 3);
-
-    match (first & 0b0110_0000) >> 5 {
-      0 => Ok(Self::Reference(Reference {
-        entry_idx: u64::from(u8::read_options(reader, endian, ())?),
-        label_idx,
-      })),
-      1 => Ok(Self::Reference(Reference {
-        entry_idx: u64::from(u16::read_options(reader, endian, ())?),
-        label_idx,
-      })),
-      2 => Ok(Self::Reference(Reference {
-        entry_idx: u64::from(u32::read_options(reader, endian, ())?),
-        label_idx,
-      })),
-      3 => Ok(Self::Reference(Reference {
-        entry_idx: u64::read_options(reader, endian, ())?,
-        label_idx,
-      })),
-      _ => unreachable!(),
+    match first {
+      0 => Ok(Self(u64::from(u8::read_options(reader, endian, ())?))),
+      1 => Ok(Self(u64::from(u16::read_options(reader, endian, ())?))),
+      2 => Ok(Self(u64::from(u32::read_options(reader, endian, ())?))),
+      3 => Ok(Self(u64::read_options(reader, endian, ())?)),
+      _ => Err(binrw::Error::AssertFail {
+        pos: reader.stream_position()?,
+        message: "Invalid label integer size".into(),
+      }),
     }
   }
 }
 
-impl BinWrite for Label {
+impl BinWrite for LabelReference {
   type Args<'a> = ();
 
   fn write_options<W: Write + Seek>(
@@ -113,38 +79,18 @@ impl BinWrite for Label {
     endian: Endian,
     _args: Self::Args<'_>,
   ) -> binrw::BinResult<()> {
-    match self {
-      Label::InPlace(buf) => {
-        assert!(
-          buf.len() <= (u8::MAX >> 1) as usize,
-          "Label is too large: {} bytes (maximum is {} bytes)",
-          buf.len(),
-          (u8::MAX >> 1)
-        );
-
-        (buf.len() as u8).write_options(writer, endian, ())?;
-        buf.write_options(writer, endian, ())?;
-      }
-      Label::Reference(Reference { entry_idx, label_idx }) => {
-        assert!(
-          *label_idx <= (u8::MAX >> 3),
-          "Label index too big, contact developer!"
-        );
-
-        if *entry_idx < u64::from(u8::MAX) {
-          ((1u8 << 7) | label_idx).write_options(writer, endian, ())?;
-          (*entry_idx as u8).write_options(writer, endian, ())?;
-        } else if *entry_idx < u64::from(u16::MAX) {
-          ((1u8 << 7) | (1 << 5) | label_idx).write_options(writer, endian, ())?;
-          (*entry_idx as u16).write_options(writer, endian, ())?;
-        } else if *entry_idx < u64::from(u32::MAX) {
-          ((1u8 << 7) | (2 << 5) | label_idx).write_options(writer, endian, ())?;
-          (*entry_idx as u32).write_options(writer, endian, ())?;
-        } else {
-          ((1u8 << 7) | (3 << 5) | label_idx).write_options(writer, endian, ())?;
-          entry_idx.write_options(writer, endian, ())?;
-        }
-      }
+    if self.0 <= u64::from(u8::MAX) {
+      0u8.write_options(writer, endian, ())?;
+      (self.0 as u8).write_options(writer, endian, ())?;
+    } else if self.0 <= u64::from(u16::MAX) {
+      1u8.write_options(writer, endian, ())?;
+      (self.0 as u16).write_options(writer, endian, ())?;
+    } else if self.0 <= u64::from(u32::MAX) {
+      2u8.write_options(writer, endian, ())?;
+      (self.0 as u32).write_options(writer, endian, ())?;
+    } else {
+      3u8.write_options(writer, endian, ())?;
+      self.0.write_options(writer, endian, ())?;
     }
 
     Ok(())
@@ -159,6 +105,12 @@ impl From<String> for PascalString {
   }
 }
 
+impl From<&str> for PascalString {
+  fn from(value: &str) -> Self {
+    value.to_string().into()
+  }
+}
+
 impl TryFrom<PascalString> for String {
   type Error = FromUtf8Error;
 
@@ -167,44 +119,58 @@ impl TryFrom<PascalString> for String {
   }
 }
 
-impl Default for IndexBuilder {
-  fn default() -> Self {
-    Self {
-      index: Index { entries: vec![] },
-      label_cache: HashMap::new(),
-    }
-  }
-}
-
-impl IndexBuilder {
-  pub fn push(&mut self, scope_id: u8, name: &str) {
-    // optimize, if there is no dot in the name, compression does not make sense
-    let labels = name
-      .split('.')
-      .enumerate()
-      .map(|(label_idx, segment)| {
-        let segment = segment.as_bytes();
-
-        if let Some((entry_idx, label_idx)) = self.label_cache.get(segment) {
-          return Label::Reference(Reference {
-            entry_idx: *entry_idx as u64,
-            label_idx: *label_idx,
-          });
-        }
-
-        self
-          .label_cache
-          .insert(segment.to_vec(), (self.index.entries.len(), label_idx as u8));
-
-        Label::InPlace(segment.to_vec())
-      })
-      .collect();
-
-    self.index.entries.push(Entry { scope_id, labels });
+impl PartialEq<str> for &PascalString {
+  fn eq(&self, other: &str) -> bool {
+    self.data == other.as_bytes()
   }
 }
 
 impl Index {
+  pub fn build(entries: &[(&str, u8)]) -> Self {
+    let mut labels = HashMap::new();
+
+    for (entry, _) in entries {
+      for label in entry.split('.') {
+        labels
+          .entry(label)
+          .and_modify(|count| *count += 1u64)
+          .or_insert(1u64);
+      }
+    }
+
+    let mut labels = labels.into_iter().collect::<Vec<_>>();
+
+    labels.sort_by(|(_, a), (_, b)| a.cmp(b).reverse());
+
+    let labels_lookup = labels
+      .iter()
+      .enumerate()
+      .map(|(idx, (label, _))| (label, idx))
+      .collect::<HashMap<_, _>>();
+
+    let labels = labels.iter().map(|(label, _)| label.to_string().into()).collect();
+
+    let entries = entries
+      .iter()
+      .map(|(entry, scope_id)| Entry {
+        scope_id: *scope_id,
+        labels: entry
+          .split('.')
+          .map(|label| {
+            LabelReference(
+              *labels_lookup
+                .get(&label)
+                .expect("this can not happen, the hashmap was build based on the same data")
+                as u64,
+            )
+          })
+          .collect(),
+      })
+      .collect();
+
+    Index { labels, entries }
+  }
+
   pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
     Self::read_from(&mut Cursor::new(buf))
   }
@@ -217,66 +183,29 @@ impl Index {
     Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
-  pub fn resolve_reference(&self, reference: &Reference) -> Result<&[u8], IxxError> {
-    let entry_idx = reference.entry_idx as usize;
-
-    if self.entries.len() <= entry_idx {
-      return Err(IxxError::ReferenceOutOfBounds);
-    }
-
-    let entry = &self.entries[entry_idx].labels;
-
-    let label_idx = reference.label_idx as usize;
-
-    if entry.len() <= label_idx {
-      return Err(IxxError::ReferenceOutOfBounds);
-    }
-
-    match &entry[label_idx] {
-      Label::InPlace(string) => Ok(string),
-      Label::Reference(_) => Err(IxxError::RecursiveReference),
-    }
+  pub fn resolve_reference(&self, reference: LabelReference) -> Option<&PascalString> {
+    self.labels.get(reference.0 as usize)
   }
 
-  pub fn get_idx_by_name(&self, scope_id: u8, name: &str) -> Result<Option<usize>, IxxError> {
-    let mut labels = Vec::new();
+  pub fn get_idx_by_name(&self, scope_id: u8, name: &str) -> Option<usize> {
+    let labels = name
+      .split('.')
+      .map(|segment| {
+        self
+          .labels
+          .iter()
+          .enumerate()
+          .find(|(_, label)| label == segment)
+          .map(|(idx, _)| LabelReference(idx as u64))
+      })
+      .collect::<Option<Vec<_>>>()?;
 
-    for segment in name.split('.') {
-      let segment = segment.as_bytes();
-
-      'outer: {
-        for (entry_idx, entry) in self.entries.iter().enumerate() {
-          for (label_idx, label) in entry.labels.iter().enumerate() {
-            let Label::InPlace(inplace) = label else {
-              continue;
-            };
-
-            if inplace != segment {
-              continue;
-            }
-
-            labels.push(Reference {
-              entry_idx: entry_idx as u64,
-              label_idx: label_idx as u8,
-            });
-            break 'outer;
-          }
-        }
-
-        return Ok(None);
-      }
-    }
-
-    Ok(
-      self
-        .entries
-        .iter()
-        .enumerate()
-        .find(|(entry_idx, entry)| {
-          entry.scope_id == scope_id && do_labels_match(*entry_idx, &entry.labels, &labels)
-        })
-        .map(|(entry_idx, _)| entry_idx),
-    )
+    self
+      .entries
+      .iter()
+      .enumerate()
+      .find(|(_, entry)| entry.scope_id == scope_id && entry.labels == labels)
+      .map(|(idx, _)| idx)
   }
 
   pub fn search(
@@ -290,7 +219,12 @@ impl Index {
       .map(str::as_bytes)
       // * at the start or end of a string
       .filter(|x| !x.is_empty())
-      .map(|segment| segment.split(|char| *char == b'.').collect())
+      .map(|segment| {
+        segment
+          .split(|char| *char == b'.')
+          .filter(|x| !x.is_empty())
+          .collect()
+      })
       .collect::<Vec<Vec<_>>>();
 
     let mut results = Vec::new();
@@ -338,330 +272,107 @@ impl Index {
   }
 }
 
-impl From<IndexBuilder> for Index {
-  fn from(value: IndexBuilder) -> Self {
-    value.index
-  }
-}
-
-fn do_labels_match(entry_idx: usize, labels: &[Label], search: &[Reference]) -> bool {
-  if labels.len() != search.len() {
-    return false;
-  }
-
-  labels
-    .iter()
-    .enumerate()
-    .zip(search.iter())
-    .all(|((label_idx, entry), search)| match entry {
-      Label::InPlace(_) => entry_idx == search.entry_idx as usize && label_idx == search.label_idx as usize,
-      Label::Reference(reference) => reference == search,
-    })
-}
-
 #[cfg(test)]
 mod tests {
-  use crate::index::*;
+  use super::*;
+  use std::io::Cursor;
 
   #[test]
-  fn test_push_one_entry() {
-    let mut builder = IndexBuilder::default();
-    builder.push(0, "foo.bar");
-    let index: Index = builder.into();
+  fn build_single_entry() {
+    let index = Index::build(&[("foo.bar", 0)]);
 
     assert_eq!(index.entries.len(), 1);
-    assert_eq!(index.entries[0].labels.len(), 2);
-    match &index.entries[0].labels[0] {
-      Label::InPlace(label) => assert_eq!(label, b"foo"),
-      _ => panic!("Expected InPlace label for 'foo'"),
-    }
-    match &index.entries[0].labels[1] {
-      Label::InPlace(label) => assert_eq!(label, b"bar"),
-      _ => panic!("Expected InPlace label for 'bar'"),
-    }
+    assert_eq!(index.labels.len(), 2);
+
+    let entry = &index.entries[0];
+    assert_eq!(entry.scope_id, 0);
+    assert_eq!(entry.labels.len(), 2);
+
+    let l0 = index.resolve_reference(entry.labels[0]).unwrap();
+    let l1 = index.resolve_reference(entry.labels[1]).unwrap();
+
+    assert_eq!(l0.data, b"foo");
+    assert_eq!(l1.data, b"bar");
   }
 
   #[test]
-  fn test_push_two_entries_with_compression() {
-    let mut builder = IndexBuilder::default();
-    builder.push(0, "foo.bar");
-    builder.push(0, "foo.buz");
-    let index: Index = builder.into();
+  fn build_two_entries_shared_label() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 0)]);
 
     assert_eq!(index.entries.len(), 2);
 
-    assert_eq!(index.entries[0].labels.len(), 2);
-    match &index.entries[0].labels[0] {
-      Label::InPlace(label) => assert_eq!(label, b"foo"),
-      _ => unreachable!("Expected InPlace label"),
-    }
-    match &index.entries[0].labels[1] {
-      Label::InPlace(label) => assert_eq!(label, b"bar"),
-      _ => unreachable!("Expected InPlace label"),
-    }
+    let e0 = &index.entries[0];
+    let e1 = &index.entries[1];
 
-    assert_eq!(index.entries[1].labels.len(), 2);
-    match &index.entries[1].labels[0] {
-      Label::Reference(reference) => {
-        assert_eq!(reference.entry_idx, 0);
-        assert_eq!(reference.label_idx, 0);
-      }
-      _ => unreachable!("Expected Reference label"),
-    }
-    match &index.entries[1].labels[1] {
-      Label::InPlace(label) => assert_eq!(label, b"buz"),
-      Label::Reference(reference) => {
-        assert_eq!(reference.entry_idx, 0);
-        assert_eq!(reference.label_idx, 1);
-      }
-    }
+    let foo0 = index.resolve_reference(e0.labels[0]).unwrap();
+    let foo1 = index.resolve_reference(e1.labels[0]).unwrap();
+
+    assert_eq!(foo0.data, b"foo");
+    assert_eq!(foo1.data, b"foo");
+
+    assert_eq!(foo0, foo1);
   }
 
   #[test]
-  fn test_push_compression_inplace_different_position() {
-    let mut builder = IndexBuilder::default();
-    builder.push(0, "pretalx");
-    builder.push(0, "nixosTests.pretalx");
-    let index: Index = builder.into();
+  fn resolve_reference() {
+    let index = Index::build(&[("foo.bar", 0)]);
 
-    assert_eq!(index.entries.len(), 2);
+    let entry = &index.entries[0];
 
-    assert_eq!(index.entries[0].labels.len(), 1);
-    match &index.entries[0].labels[0] {
-      Label::InPlace(label) => assert_eq!(label, b"pretalx"),
-      _ => unreachable!("Expected InPlace label"),
-    }
-
-    assert_eq!(index.entries[1].labels.len(), 2);
-    match &index.entries[1].labels[0] {
-      Label::Reference(reference) => {
-        assert_eq!(reference.entry_idx, 0);
-        assert_eq!(reference.label_idx, 0);
-      }
-      Label::InPlace(label) => assert_eq!(label, b"nixosTests"),
-    }
-    match &index.entries[1].labels[1] {
-      Label::Reference(reference) => {
-        assert_eq!(reference.entry_idx, 0);
-      }
-      _ => unreachable!("Expected Reference label"),
-    }
+    let label = index.resolve_reference(entry.labels[1]).unwrap();
+    assert_eq!(label.data, b"bar");
   }
 
   #[test]
-  fn test_push_compression_inplace_different_position_reverse() {
-    let mut builder = IndexBuilder::default();
-    builder.push(0, "nixosTests.pretalx");
-    builder.push(0, "pretalx");
-    let index: Index = builder.into();
+  fn get_idx_by_name() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 1)]);
 
-    assert_eq!(index.entries.len(), 2);
+    let idx = index.get_idx_by_name(0, "foo.bar");
+    assert_eq!(idx, Some(0));
 
-    assert_eq!(index.entries[0].labels.len(), 2);
-    match &index.entries[0].labels[0] {
-      Label::InPlace(label) => assert_eq!(label, b"nixosTests"),
-      _ => unreachable!("Expected InPlace label"),
-    }
-    match &index.entries[0].labels[1] {
-      Label::InPlace(label) => assert_eq!(label, b"pretalx"),
-      _ => unreachable!("Expected InPlace label"),
-    }
+    let idx = index.get_idx_by_name(1, "foo.baz");
+    assert_eq!(idx, Some(1));
 
-    assert_eq!(index.entries[1].labels.len(), 1);
-    match &index.entries[1].labels[0] {
-      Label::Reference(reference) => {
-        assert_eq!(reference.entry_idx, 0);
-        assert_eq!(reference.label_idx, 1);
-      }
-      _ => unreachable!("Expected Reference label"),
-    }
+    let idx = index.get_idx_by_name(0, "foo.baz");
+    assert_eq!(idx, None);
   }
 
   #[test]
-  fn test_labels_match_inplace() {
-    let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
-    let search = vec![
-      Reference {
-        entry_idx: 0,
-        label_idx: 0,
-      },
-      Reference {
-        entry_idx: 0,
-        label_idx: 1,
-      },
-    ];
-    assert!(do_labels_match(0, &labels, &search));
+  fn write_read_roundtrip() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 1)]);
+
+    let mut buf = Cursor::new(Vec::new());
+    index.write_into(&mut buf).unwrap();
+
+    // dump raw bytes for debugging
+    let data = buf.get_ref();
+    eprintln!("written {} bytes: {:02x?}", data.len(), data);
+
+    buf.set_position(0);
+
+    let decoded = Index::read_from(&mut buf).unwrap();
+
+    eprintln!("decoded index: {:#?}", decoded);
+
+    assert_eq!(index, decoded);
   }
 
   #[test]
-  fn test_labels_match_reference() {
-    let reference = Reference {
-      entry_idx: 1,
-      label_idx: 2,
-    };
-    let labels = vec![Label::Reference(reference.clone())];
-    let search = vec![reference.clone()];
-    assert!(do_labels_match(0, &labels, &search));
+  fn search_exact_match() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 0), ("alpha.beta", 1)]);
+
+    let results = index.search(None, "foo.bar", 10).unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].2.as_str(), "foo.bar");
   }
 
   #[test]
-  fn test_labels_mismatch_inplace() {
-    let labels = vec![Label::InPlace(b"foo".to_vec())];
-    let search = vec![Reference {
-      entry_idx: 1,
-      label_idx: 0,
-    }];
-    assert!(!do_labels_match(0, &labels, &search));
-  }
+  fn search_wildcard() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 0), ("alpha.beta", 1)]);
 
-  #[test]
-  fn test_labels_mismatch_reference() {
-    let labels = vec![Label::Reference(Reference {
-      entry_idx: 1,
-      label_idx: 1,
-    })];
-    let search = vec![Reference {
-      entry_idx: 2,
-      label_idx: 1,
-    }];
-    assert!(!do_labels_match(0, &labels, &search));
+    let results = index.search(None, "foo.*", 10).unwrap();
 
-    let labels = vec![Label::Reference(Reference {
-      entry_idx: 1,
-      label_idx: 1,
-    })];
-    let search = vec![Reference {
-      entry_idx: 1,
-      label_idx: 2,
-    }];
-    assert!(!do_labels_match(0, &labels, &search));
-  }
-
-  #[test]
-  fn test_labels_length_mismatch() {
-    let labels = vec![Label::InPlace(b"foo".to_vec())];
-    let search = vec![
-      Reference {
-        entry_idx: 0,
-        label_idx: 0,
-      },
-      Reference {
-        entry_idx: 0,
-        label_idx: 1,
-      },
-    ];
-    assert!(!do_labels_match(0, &labels, &search));
-
-    let labels = vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())];
-    let search = vec![Reference {
-      entry_idx: 0,
-      label_idx: 0,
-    }];
-    assert!(!do_labels_match(0, &labels, &search));
-  }
-
-  #[test]
-  fn test_resolve_reference_inplace() {
-    let entry = Entry {
-      scope_id: 0,
-      labels: vec![Label::InPlace(b"foo".to_vec()), Label::InPlace(b"bar".to_vec())],
-    };
-    let index = Index { entries: vec![entry] };
-    let reference = Reference {
-      entry_idx: 0,
-      label_idx: 1,
-    };
-    let result = index.resolve_reference(&reference);
-    assert_eq!(result.unwrap(), b"bar");
-  }
-
-  #[test]
-  fn test_resolve_reference_multiple_entries() {
-    let entry1 = Entry {
-      scope_id: 0,
-      labels: vec![Label::InPlace(b"foo".to_vec())],
-    };
-    let entry2 = Entry {
-      scope_id: 0,
-      labels: vec![Label::InPlace(b"bar".to_vec()), Label::InPlace(b"baz".to_vec())],
-    };
-    let index = Index {
-      entries: vec![entry1, entry2],
-    };
-    let reference = Reference {
-      entry_idx: 1,
-      label_idx: 1,
-    };
-    let result = index.resolve_reference(&reference);
-    assert_eq!(result.unwrap(), b"baz");
-  }
-
-  #[test]
-  fn test_resolve_reference_mixed_labels() {
-    let entry = Entry {
-      scope_id: 0,
-      labels: vec![
-        Label::Reference(Reference {
-          entry_idx: 0,
-          label_idx: 0,
-        }),
-        Label::InPlace(b"real".to_vec()),
-      ],
-    };
-    let index = Index { entries: vec![entry] };
-    let reference = Reference {
-      entry_idx: 0,
-      label_idx: 1,
-    };
-    let result = index.resolve_reference(&reference);
-    assert_eq!(result.unwrap(), b"real");
-  }
-
-  #[test]
-  fn test_resolve_reference_out_of_bounds_entry() {
-    let entry = Entry {
-      scope_id: 0,
-      labels: vec![Label::InPlace(b"foo".to_vec())],
-    };
-    let index = Index { entries: vec![entry] };
-    let reference = Reference {
-      entry_idx: 1,
-      label_idx: 0,
-    };
-    let result = index.resolve_reference(&reference);
-    assert!(matches!(result, Err(IxxError::ReferenceOutOfBounds)));
-  }
-
-  #[test]
-  fn test_resolve_reference_out_of_bounds_label() {
-    let entry = Entry {
-      scope_id: 0,
-      labels: vec![Label::InPlace(b"foo".to_vec())],
-    };
-    let index = Index { entries: vec![entry] };
-    let reference = Reference {
-      entry_idx: 0,
-      label_idx: 1,
-    };
-    let result = index.resolve_reference(&reference);
-    assert!(matches!(result, Err(IxxError::ReferenceOutOfBounds)));
-  }
-
-  #[test]
-  fn test_resolve_reference_recursive() {
-    let entry = Entry {
-      scope_id: 0,
-      labels: vec![Label::Reference(Reference {
-        entry_idx: 0,
-        label_idx: 0,
-      })],
-    };
-    let index = Index { entries: vec![entry] };
-    let reference = Reference {
-      entry_idx: 0,
-      label_idx: 0,
-    };
-    let result = index.resolve_reference(&reference);
-    assert!(matches!(result, Err(IxxError::RecursiveReference)));
+    assert_eq!(results.len(), 2);
   }
 }

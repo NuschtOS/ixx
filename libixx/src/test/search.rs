@@ -1,26 +1,25 @@
-use crate::{Index, IndexBuilder};
+use crate::Index;
 
 #[test]
 fn test() {
-  let mut index_builder = IndexBuilder::default();
-
-  index_builder.push(0, "home.enableDebugInfo");
-  index_builder.push(0, "home.enableNixpkgsReleaseCheck");
-  index_builder.push(0, "home.file.<name>.enable");
-  index_builder.push(0, "home.language.measurement");
-  index_builder.push(0, "home.pointerCursor.gtk.enable");
-  index_builder.push(0, "home.pointerCursor.x11.enable");
-  index_builder.push(0, "programs.home-manager.enable");
-  index_builder.push(0, "services.home-manager.autoUpgrade.enable");
-  index_builder.push(0, "services.home-manager.autoUpgrade.frequency");
-
-  index_builder.push(0, "pretalx");
-  index_builder.push(0, "nixosTests.pretalx");
-  index_builder.push(0, "nixosTests.allDrivers.pretalx");
-
-  index_builder.push(1, "home.enableDebugInfo");
-
-  let index: Index = index_builder.into();
+  let index = Index::build(
+    vec![
+      ("home.enableDebugInfo", 0),
+      ("home.enableNixpkgsReleaseCheck", 0),
+      ("home.file.<name>.enable", 0),
+      ("home.language.measurement", 0),
+      ("home.pointerCursor.gtk.enable", 0),
+      ("home.pointerCursor.x11.enable", 0),
+      ("programs.home-manager.enable", 0),
+      ("services.home-manager.autoUpgrade.enable", 0),
+      ("services.home-manager.autoUpgrade.frequency", 0),
+      ("pretalx", 0),
+      ("nixosTests.pretalx", 0),
+      ("nixosTests.allDrivers.pretalx", 0),
+      ("home.enableDebugInfo", 1),
+    ]
+    .as_slice(),
+  );
 
   assert_eq!(
     index.search(None, "ho*auto", 10).unwrap(),
@@ -72,8 +71,5 @@ fn test() {
     ]
   );
 
-  assert_eq!(
-    index.get_idx_by_name(1, "home.enableDebugInfo").unwrap(),
-    Some(12)
-  );
+  assert_eq!(index.get_idx_by_name(1, "home.enableDebugInfo"), Some(12));
 }
