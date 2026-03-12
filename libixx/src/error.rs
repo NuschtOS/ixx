@@ -1,3 +1,4 @@
+use std::io;
 use std::str::Utf8Error;
 
 use thiserror::Error;
@@ -13,4 +14,6 @@ pub enum IxxError {
   Binrw(#[from] binrw::Error),
   #[error("invalid utf8")]
   FromUtf8Error(#[from] Utf8Error),
+  #[error("io error")]
+  IoError(#[from] io::Error),
 }

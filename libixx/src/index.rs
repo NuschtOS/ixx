@@ -5,6 +5,7 @@ use std::{
 };
 
 use binrw::{BinRead, BinWrite, Endian, binrw};
+use lzma_rust2::{XzOptions, XzReader, XzWriter};
 
 use levenshtein::levenshtein;
 
@@ -182,15 +183,34 @@ impl Index {
   }
 
   pub fn read(buf: &[u8]) -> Result<Self, IxxError> {
-    Self::read_from(&mut Cursor::new(buf))
+    let cursor = Cursor::new(buf);
+    let mut decoder = XzReader::new(cursor, false);
+    let mut decompressed = Vec::new();
+    decoder.read_to_end(&mut decompressed)?;
+    Ok(BinRead::read_options(
+      &mut Cursor::new(decompressed),
+      Endian::Little,
+      (),
+    )?)
   }
 
   pub fn read_from<R: Read + Seek>(read: &mut R) -> Result<Self, IxxError> {
-    Ok(BinRead::read_options(read, Endian::Little, ())?)
+    let mut compressed = Vec::new();
+    read.read_to_end(&mut compressed)?;
+    Self::read(&compressed)
   }
 
   pub fn write_into<W: Write + Seek>(&self, write: &mut W) -> Result<(), IxxError> {
-    Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
+    let mut uncompressed = Cursor::new(Vec::new());
+    BinWrite::write_options(self, &mut uncompressed, Endian::Little, ())?;
+    let uncompressed_bytes = uncompressed.into_inner();
+
+    let mut encoder = XzWriter::new(Vec::new(), XzOptions::default())?;
+    encoder.write_all(&uncompressed_bytes)?;
+    let compressed = encoder.finish()?;
+
+    write.write_all(&compressed)?;
+    Ok(())
   }
 
   pub fn resolve_reference(&self, reference: LabelReference) -> Result<&PascalString, IxxError> {
