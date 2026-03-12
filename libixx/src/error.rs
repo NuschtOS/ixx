@@ -4,8 +4,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum IxxError {
-  #[error("referenced out of bounds data")]
-  ReferenceOutOfBounds,
+  #[error("invalid label reference")]
+  InvalidLabelReference,
   #[error("recursive reference")]
   RecursiveReference,
 

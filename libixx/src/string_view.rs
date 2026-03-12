@@ -19,12 +19,12 @@ impl Display for StringView<'_, '_> {
       return Ok(());
     }
 
-    let part = self.index.resolve_reference(self.parts[0]).unwrap();
+    let part = self.index.resolve_reference(self.parts[0]).ok().unwrap();
 
     write!(f, "{}", std::str::from_utf8(&part.data).unwrap())?;
 
     for part in &self.parts[1..] {
-      let part = self.index.resolve_reference(*part).unwrap();
+      let part = self.index.resolve_reference(*part).ok().unwrap();
       write!(f, ".{}", std::str::from_utf8(&part.data).unwrap())?;
     }
 
@@ -41,7 +41,7 @@ impl StringView<'_, '_> {
       for part in segment {
         'outer: {
           for (self_part_idx, self_part) in self.parts[self_parts_start..].iter().enumerate() {
-            let self_part = self.index.resolve_reference(*self_part).unwrap();
+            let self_part = self.index.resolve_reference(*self_part)?;
 
             if let Some(idx) = ascii_ignore_case_find(&self_part.data[self_parts_start_str_idx..], part) {
               self_parts_start += self_part_idx;
@@ -102,7 +102,7 @@ mod tests {
 
   fn make_index_with_labels(labels: Vec<PascalString>) -> Index {
     Index {
-      labels,
+      labels: labels,
       entries: vec![],
     }
   }

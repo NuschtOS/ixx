@@ -99,15 +99,25 @@ impl BinWrite for LabelReference {
 
 impl From<String> for PascalString {
   fn from(value: String) -> Self {
-    Self {
-      data: value.into_bytes(),
-    }
+    let bytes = value.into_bytes();
+    assert!(
+      bytes.len() <= 255,
+      "PascalString data exceeds maximum length of 255 bytes: {}",
+      bytes.len()
+    );
+    Self { data: bytes }
   }
 }
 
 impl From<&str> for PascalString {
   fn from(value: &str) -> Self {
-    value.to_string().into()
+    let bytes = value.as_bytes();
+    assert!(
+      bytes.len() <= 255,
+      "PascalString data exceeds maximum length of 255 bytes: {}",
+      bytes.len()
+    );
+    Self { data: bytes.to_vec() }
   }
 }
 
@@ -183,8 +193,11 @@ impl Index {
     Ok(BinWrite::write_options(self, write, Endian::Little, ())?)
   }
 
-  pub fn resolve_reference(&self, reference: LabelReference) -> Option<&PascalString> {
-    self.labels.get(reference.0 as usize)
+  pub fn resolve_reference(&self, reference: LabelReference) -> Result<&PascalString, IxxError> {
+    self
+      .labels
+      .get(reference.0 as usize)
+      .ok_or(IxxError::InvalidLabelReference)
   }
 
   pub fn get_idx_by_name(&self, scope_id: u8, name: &str) -> Option<usize> {
@@ -288,8 +301,12 @@ mod tests {
     assert_eq!(entry.scope_id, 0);
     assert_eq!(entry.labels.len(), 2);
 
-    let l0 = index.resolve_reference(entry.labels[0]).unwrap();
-    let l1 = index.resolve_reference(entry.labels[1]).unwrap();
+    let l0 = index
+      .resolve_reference(entry.labels[0])
+      .expect("test data is valid");
+    let l1 = index
+      .resolve_reference(entry.labels[1])
+      .expect("test data is valid");
 
     assert_eq!(l0.data, b"foo");
     assert_eq!(l1.data, b"bar");
@@ -304,8 +321,8 @@ mod tests {
     let e0 = &index.entries[0];
     let e1 = &index.entries[1];
 
-    let foo0 = index.resolve_reference(e0.labels[0]).unwrap();
-    let foo1 = index.resolve_reference(e1.labels[0]).unwrap();
+    let foo0 = index.resolve_reference(e0.labels[0]).expect("test data is valid");
+    let foo1 = index.resolve_reference(e1.labels[0]).expect("test data is valid");
 
     assert_eq!(foo0.data, b"foo");
     assert_eq!(foo1.data, b"foo");
@@ -319,7 +336,9 @@ mod tests {
 
     let entry = &index.entries[0];
 
-    let label = index.resolve_reference(entry.labels[1]).unwrap();
+    let label = index
+      .resolve_reference(entry.labels[1])
+      .expect("test data is valid");
     assert_eq!(label.data, b"bar");
   }
 
@@ -374,5 +393,118 @@ mod tests {
     let results = index.search(None, "foo.*", 10).unwrap();
 
     assert_eq!(results.len(), 2);
+  }
+
+  #[test]
+  fn search_empty_query() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 0)]);
+    let results = index.search(None, "", 10).unwrap();
+    // Empty query results in empty search vector, which matches all entries
+    assert_eq!(results.len(), 2);
+  }
+
+  #[test]
+  fn search_with_wildcard_only() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 0)]);
+    let results = index.search(None, "*", 10).unwrap();
+    // Query with only wildcards results in empty search vector, which matches all entries
+    assert_eq!(results.len(), 2);
+  }
+
+  #[test]
+  fn search_max_results_capping() {
+    let index = Index::build(&[
+      ("alpha.one", 0),
+      ("alpha.two", 0),
+      ("alpha.three", 0),
+      ("alpha.four", 0),
+      ("alpha.five", 0),
+    ]);
+    let results = index.search(None, "alpha", 2).unwrap();
+    // Should return at most max_results items
+    assert_eq!(results.len(), 2);
+  }
+
+  #[test]
+  fn search_empty_index() {
+    let index = Index::build(&[]);
+    let results = index.search(None, "foo", 10).unwrap();
+    assert_eq!(results.len(), 0);
+  }
+
+  #[test]
+  fn search_invalid_scope_id() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 1)]);
+    let results = index.search(Some(99), "foo", 10).unwrap();
+    // No entries with scope_id 99 should exist
+    assert_eq!(results.len(), 0);
+  }
+
+  #[test]
+  fn get_idx_by_name_empty_index() {
+    let index = Index::build(&[]);
+    let idx = index.get_idx_by_name(0, "foo.bar");
+    assert_eq!(idx, None);
+  }
+
+  #[test]
+  fn get_idx_by_name_nonexistent() {
+    let index = Index::build(&[("foo.bar", 0)]);
+    let idx = index.get_idx_by_name(0, "foo.baz");
+    assert_eq!(idx, None);
+  }
+
+  #[test]
+  fn get_idx_by_name_wrong_scope() {
+    let index = Index::build(&[("foo.bar", 0)]);
+    let idx = index.get_idx_by_name(1, "foo.bar");
+    assert_eq!(idx, None);
+  }
+
+  #[test]
+  fn resolve_reference_out_of_bounds() {
+    let index = Index::build(&[("foo.bar", 0)]);
+    let invalid_ref = LabelReference(999);
+    let result = index.resolve_reference(invalid_ref);
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn pascal_string_length_validation() {
+    // Valid: 255 bytes is the maximum
+    let long_string = "a".repeat(255);
+    let ps: PascalString = long_string.as_str().into();
+    assert_eq!(ps.data.len(), 255);
+
+    // Valid: Convert from String
+    let long_string_owned = "b".repeat(255);
+    let ps: PascalString = long_string_owned.into();
+    assert_eq!(ps.data.len(), 255);
+  }
+
+  #[test]
+  #[should_panic(expected = "PascalString data exceeds maximum length")]
+  fn pascal_string_exceeds_max_length_from_str() {
+    let too_long_string = "a".repeat(256);
+    let _ps: PascalString = too_long_string.as_str().into();
+  }
+
+  #[test]
+  #[should_panic(expected = "PascalString data exceeds maximum length")]
+  fn pascal_string_exceeds_max_length_from_string() {
+    let too_long_string = "b".repeat(256);
+    let _ps: PascalString = too_long_string.into();
+  }
+
+  #[test]
+  fn index_size() {
+    let index = Index::build(&[("foo.bar", 0), ("foo.baz", 0), ("alpha.beta", 1)]);
+    assert_eq!(index.size(), 3);
+  }
+
+  #[test]
+  fn index_size_empty() {
+    let index: Index = Index::build(&[]);
+    assert_eq!(index.size(), 0);
   }
 }
