@@ -41,7 +41,7 @@ rustPlatform.buildRustPackage rec {
   installPhase = ''
     cp -r fixx/pkg $out
     mkdir $dist
-    mv $out/nuschtos-fixx-*-git.tgz $dist/
+    mv $out/nuschtos-fixx-*.tgz $dist/
   '';
 
   cargoBuildFlags = "-p ${pname}";
