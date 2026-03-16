@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         module: [ libixx, ixx, fixx ]
-        target: [ "25.05", "unstable" ]
+        target: [ "25.11", "unstable" ]
 
     steps:
       - uses: actions/checkout@v5

@@ -1,9 +1,11 @@
 { lib
 , rustPlatform
 , binaryen
+, nodejs
 , rustc
 , wasm-pack
-, wasm-bindgen-cli_0_2_100
+, wasm-bindgen-cli_0_2_106
+, release ? true
 }:
 
 let
@@ -13,23 +15,33 @@ rustPlatform.buildRustPackage rec {
   pname = "fixx";
   inherit (manifest) version;
 
+  outputs = [ "out" "dist" ];
+
   src = lib.cleanSource ../.;
   cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = [
     binaryen
+    nodejs # for npm
     rustc.llvmPackages.lld
     wasm-pack
-    wasm-bindgen-cli_0_2_100
+    wasm-bindgen-cli_0_2_106
   ];
 
   buildPhase = ''
     export HOME=$(mktemp -d)
-    (cd fixx && wasm-pack build --release --target web --scope nuschtos)
+
+    cd fixx
+    wasm-pack build --${if release then "release" else "dev"} --target web --scope nuschtos --reference-types
+    cd pkg
+    npm pack
+    cd ../..
   '';
 
   installPhase = ''
     cp -r fixx/pkg $out
+    mkdir $dist
+    mv $out/nuschtos-fixx-*-git.tgz $dist/
   '';
 
   cargoBuildFlags = "-p ${pname}";

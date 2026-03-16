@@ -1,4 +1,5 @@
-/target
-/result
-/fixx/pkg
 /data
+/fixx/pkg
+/index.ixx
+/result
+/target

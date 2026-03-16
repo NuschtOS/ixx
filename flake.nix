@@ -17,8 +17,13 @@
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
               cargo
+              cargo-flamegraph
+              clippy
+              nodejs # for npm
+              pnpm
               rustc
               rustc.llvmPackages.lld
+              rustfmt
               wasm-pack
             ];
 

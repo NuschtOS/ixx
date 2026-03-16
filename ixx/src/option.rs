@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
-use url::Url;
 
-use crate::utils::highlight;
+use crate::{Declaration, utils::highlight};
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Default, Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct Option {
   pub declarations: Vec<Declaration>,
   pub description: String,
@@ -17,33 +16,22 @@ pub struct Option {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", untagged)]
-pub enum Declaration {
-  /// Example Value: `/nix/store/vgvk6q3zsjgb66f8s5cm8djz6nmcag1i-source/modules/initrd.nix`
-  StorePath(String),
-  Url {
-    name: String,
-    url: Url,
-  },
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 #[serde(tag = "_type")]
 pub enum Content {
   LiteralExpression {
     text: String,
+    // nixvim uses this in programs.nixvim.dependencies.coreutils.package
+    path: std::option::Option<Vec<String>>,
   },
   #[serde(rename = "literalMD")]
-  Markdown {
-    text: String,
-  },
+  Markdown { text: String },
 }
 
 impl Content {
   pub(crate) fn render(self) -> String {
     match self {
-      Self::LiteralExpression { text } => highlight(text.trim()),
+      Self::LiteralExpression { text, .. } => highlight(text.trim()),
       Self::Markdown { text } => markdown::to_html(text.trim()),
     }
   }

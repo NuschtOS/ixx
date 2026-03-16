@@ -1,5 +1,3 @@
-use std::string::FromUtf8Error;
-
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -17,63 +15,60 @@ impl Index {
   pub fn read(buf: Vec<u8>) -> Result<Self, String> {
     libixx::Index::read(&buf)
       .map(Self)
-      .map_err(|err| format!("{:?}", err))
-  }
-
-  pub fn chunk_size(&self) -> u32 {
-    self.0.meta().chunk_size
-  }
-
-  pub fn scopes(&self) -> Result<Vec<String>, String> {
-    self
-      .0
-      .meta()
-      .scopes
-      .iter()
-      .map(|scope| String::try_from(scope.clone()))
-      .collect::<Result<Vec<String>, FromUtf8Error>>()
-      .map_err(|err| format!("{:?}", err))
+      .map_err(|err| format!("{err:?}"))
   }
 
   pub fn search(
     &self,
     scope_id: Option<u8>,
-    query: String,
+    #[wasm_bindgen(unchecked_param_type = "string")] query: &JsValue,
     max_results: usize,
   ) -> Result<Vec<SearchedOption>, String> {
-    match self.0.search(scope_id, &query, max_results) {
+    let query_str = query
+      .as_string()
+      .ok_or_else(|| "Invalid query: expected a string".to_string())?;
+    match self.0.search(scope_id, &query_str, max_results) {
       Ok(options) => Ok(
         options
           .into_iter()
-          .map(|(idx, scope_id, name)| SearchedOption {
-            idx,
-            scope_id,
-            name,
-          })
+          .map(|(idx, scope_id, name)| SearchedOption { idx, scope_id, name })
           .collect(),
       ),
-      Err(err) => Err(format!("{:?}", err)),
+      Err(err) => Err(format!("{err:?}")),
     }
   }
 
-  pub fn get_idx_by_name(&self, scope_id: u8, name: String) -> Result<Option<usize>, String> {
-    self
-      .0
-      .get_idx_by_name(scope_id, &name)
-      .map_err(|err| format!("{:?}", err))
+  pub fn get_idx_by_name(
+    &self,
+    scope_id: u8,
+    #[wasm_bindgen(unchecked_param_type = "string")] name: &JsValue,
+  ) -> Result<Option<usize>, String> {
+    let name_str = name
+      .as_string()
+      .ok_or_else(|| "Invalid name: expected a string".to_string())?;
+
+    Ok(self.0.get_idx_by_name(scope_id, &name_str))
+  }
+
+  #[must_use]
+  pub fn size(&self) -> usize {
+    self.0.size()
   }
 }
 
 #[wasm_bindgen]
 impl SearchedOption {
+  #[must_use]
   pub fn idx(&self) -> usize {
     self.idx
   }
 
+  #[must_use]
   pub fn scope_id(&self) -> u8 {
     self.scope_id
   }
 
+  #[must_use]
   pub fn name(self) -> String {
     self.name
   }
