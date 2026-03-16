@@ -20,6 +20,10 @@
       "groupName": "crates"
     },
     {
+      "matchManagers": ["github-actions"],
+      "groupName": "actions"
+    },
+    {
       "matchManagers": ["nix"],
       "groupName": "flake inputs"
     }
