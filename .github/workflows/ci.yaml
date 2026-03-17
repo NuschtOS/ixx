@@ -9,7 +9,6 @@ on:
 permissions:
   contents: read
   id-token: write  # Required for OIDC
-  packages: write
 
 jobs:
   build:
@@ -84,5 +83,3 @@ jobs:
 
       - run: npm publish --no-git-checks --access=public
         working-directory: result/${{ matrix.module }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
