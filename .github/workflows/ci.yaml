@@ -81,5 +81,5 @@ jobs:
         with:
           registry-url: https://registry.npmjs.org
 
-      - run: npm publish --no-git-checks --access=public
+      - run: npm publish --no-git-checks --access=public --provenance
         working-directory: result/${{ matrix.module }}
