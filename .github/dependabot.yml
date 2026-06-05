@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      rust-dependencies:
+      cargo-dependencies:
         patterns:
           - '*'
   - package-ecosystem: "github-actions"
