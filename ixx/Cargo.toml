@@ -6,7 +6,7 @@ repository = "https://github.com/NuschtOS/ixx/"
 license = "MIT OR Apache-2.0"
 
 [dependencies.tokio]
-version = "1.49"
+version = "1.52"
 default-features = false
 features = ["macros", "rt-multi-thread", "fs", "io-util"]
 
