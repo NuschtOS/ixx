@@ -67,4 +67,5 @@ pub enum SourceProvenance {
   BinaryNativeCode,
   BinaryFirmware,
   BinaryBytecode,
+  ObfuscatedCode
 }
