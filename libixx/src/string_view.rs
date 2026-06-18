@@ -51,6 +51,9 @@ impl StringView<'_, '_> {
           prev_was_single_part = false;
         }
         for part in segment {
+          if self_parts_start >= self.parts.len() {
+              return Ok(false);
+          }
           let self_part = self.index.resolve_reference(self.parts[self_parts_start])?;
           if !eq_ignore_ascii_case(&self_part.data, part) {
             return Ok(false);
