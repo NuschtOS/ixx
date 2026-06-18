@@ -35,27 +35,49 @@ impl Display for StringView<'_, '_> {
 impl StringView<'_, '_> {
   pub fn matches(&self, search: &[Vec<&[u8]>]) -> Result<bool, IxxError> {
     let mut self_parts_start = 0;
+    // byte offset into self.parts[self_parts_start] to resume from
     let mut self_parts_start_str_idx = 0;
+    // single-part matches leave self_parts_start on the matched label,
+    // a subsequent multi-part segment needs to start at the next label
+    let mut prev_was_single_part = false;
 
     for segment in search {
-      for part in segment {
+      // for eg: "programs.vim" each dot-component matches a full label exactly
+      if segment.len() > 1 {
+        if prev_was_single_part {
+          self_parts_start += 1;
+          self_parts_start_str_idx = 0;
+
+          prev_was_single_part = false;
+        }
+        for part in segment {
+          let self_part = self.index.resolve_reference(self.parts[self_parts_start])?;
+          if !eq_ignore_ascii_case(&self_part.data, part) {
+            return Ok(false);
+          }
+          self_parts_start += 1;
+        }
+      } else {
+        // bare word or trailing wildcard: substring should match across remaining labels
+        let part = &segment[0];
         'outer: {
           for (self_part_idx, self_part) in self.parts[self_parts_start..].iter().enumerate() {
             let self_part = self.index.resolve_reference(*self_part)?;
 
             if let Some(idx) = ascii_ignore_case_find(&self_part.data[self_parts_start_str_idx..], part) {
               self_parts_start += self_part_idx;
-              if self_part_idx == 0 {
-                self_parts_start_str_idx += idx;
+              self_parts_start_str_idx = if self_part_idx == 0 {
+                self_parts_start_str_idx + idx
               } else {
-                self_parts_start_str_idx = 0;
-              }
+                idx
+              };
               break 'outer;
             }
             self_parts_start_str_idx = 0;
           }
           return Ok(false);
         }
+        prev_was_single_part = true;
       }
     }
 
