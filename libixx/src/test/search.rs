@@ -73,3 +73,59 @@ fn test() {
 
   assert_eq!(index.get_idx_by_name(1, "home.enableDebugInfo"), Some(12));
 }
+
+#[test]
+fn test_exact_search() {
+  let index = Index::build(
+    vec![
+      ("programs.neovim.enable", 0),
+      ("programs.nixvim.enable", 0),
+      ("programs.vim.enable", 0),
+    ]
+    .as_slice(),
+  );
+
+  assert_eq!(
+    index.search(Some(0), "programs.neovim", 10).unwrap(),
+    vec![(0, 0, "programs.neovim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.neovim*", 10).unwrap(),
+    vec![(0, 0, "programs.neovim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.neovim.enable", 10).unwrap(),
+    vec![(0, 0, "programs.neovim.enable".to_string())]
+  );
+
+  assert_eq!(
+    index.search(Some(0), "programs.nixvim*", 10).unwrap(),
+    vec![(1, 0, "programs.nixvim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.nixvim", 10).unwrap(),
+    vec![(1, 0, "programs.nixvim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.nixvim.enable", 10).unwrap(),
+    vec![(1, 0, "programs.nixvim.enable".to_string())]
+  );
+
+  assert_eq!(
+    index.search(Some(0), "programs.vim*", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.vim", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.vim.enable", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+
+  assert_eq!(
+    index.search(Some(0), "programs.*vim.enable", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+}
