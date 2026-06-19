@@ -21,7 +21,7 @@ jobs:
         target: [ "26.05", "unstable" ]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Find Version
         if: startsWith(github.ref, 'refs/tags/')
@@ -70,7 +70,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v8
         with:
