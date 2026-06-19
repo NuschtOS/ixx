@@ -90,6 +90,10 @@ fn test_exact_search() {
     vec![(0, 0, "programs.neovim.enable".to_string())]
   );
   assert_eq!(
+    index.search(Some(0), "programs.neovim.en", 10).unwrap(),
+    vec![(0, 0, "programs.neovim.enable".to_string())]
+  );
+  assert_eq!(
     index.search(Some(0), "programs.neovim.enable", 10).unwrap(),
     vec![(0, 0, "programs.neovim.enable".to_string())]
   );
@@ -99,7 +103,42 @@ fn test_exact_search() {
     vec![(1, 0, "programs.nixvim.enable".to_string())]
   );
   assert_eq!(
+    index.search(Some(0), "programs.nixvim.ena", 10).unwrap(),
+    vec![(1, 0, "programs.nixvim.enable".to_string())]
+  );
+  assert_eq!(
     index.search(Some(0), "programs.nixvim.enable", 10).unwrap(),
+    vec![(1, 0, "programs.nixvim.enable".to_string())]
+  );
+
+  assert_eq!(
+    index.search(Some(0), "programs.vim", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.vim.enab", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.vim.enable", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+
+  // regression tests that wildcard matching also works as expected
+  assert_eq!(
+    index.search(Some(0), "programs.vim*", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.*vim.enable", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.neovim*", 10).unwrap(),
+    vec![(0, 0, "programs.neovim.enable".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs.nixvim*", 10).unwrap(),
     vec![(1, 0, "programs.nixvim.enable".to_string())]
   );
 
@@ -138,5 +177,20 @@ fn test_exact_search() {
   assert_eq!(
       index.search(Some(0), "programs*vim.enable.extra", 10).unwrap(),
       vec![]
+  );
+
+  assert_eq!(
+    index.search(Some(0), "enab", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string()), (0, 0, "programs.neovim.enable".to_string()), (1, 0, "programs.nixvim.enable".to_string())]
+  );
+  // we don't do backtracking for search terms, so this returns nothing...
+  assert_eq!(
+    index.search(Some(0), "vim.enable", 10).unwrap(),
+    vec![]
+  );
+  // ... but this should return everything
+  assert_eq!(
+    index.search(Some(0), "*im.enable", 10).unwrap(),
+    vec![(2, 0, "programs.vim.enable".to_string()), (0, 0, "programs.neovim.enable".to_string()), (1, 0, "programs.nixvim.enable".to_string())]
   );
 }
