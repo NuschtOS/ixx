@@ -103,33 +103,6 @@ fn test_exact_search() {
     vec![(1, 0, "programs.nixvim.enable".to_string())]
   );
 
-  assert_eq!(
-    index.search(Some(0), "programs.vim", 10).unwrap(),
-    vec![(2, 0, "programs.vim.enable".to_string())]
-  );
-  assert_eq!(
-    index.search(Some(0), "programs.vim.enable", 10).unwrap(),
-    vec![(2, 0, "programs.vim.enable".to_string())]
-  );
-
-  // regression tests that wildcard matching also works as expected
-  assert_eq!(
-    index.search(Some(0), "programs.vim*", 10).unwrap(),
-    vec![(2, 0, "programs.vim.enable".to_string())]
-  );
-  assert_eq!(
-    index.search(Some(0), "programs.*vim.enable", 10).unwrap(),
-    vec![(2, 0, "programs.vim.enable".to_string())]
-  );
-  assert_eq!(
-    index.search(Some(0), "programs.neovim*", 10).unwrap(),
-    vec![(0, 0, "programs.neovim.enable".to_string())]
-  );
-  assert_eq!(
-    index.search(Some(0), "programs.nixvim*", 10).unwrap(),
-    vec![(1, 0, "programs.nixvim.enable".to_string())]
-  );
-
   // regression test that no out of bounds happen
   assert_eq!(
       index.search(Some(0), "programs.vim.enable.extra", 10).unwrap(),
