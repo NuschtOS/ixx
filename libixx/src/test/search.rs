@@ -194,3 +194,32 @@ fn test_exact_search() {
     vec![(2, 0, "programs.vim.enable".to_string()), (0, 0, "programs.neovim.enable".to_string()), (1, 0, "programs.nixvim.enable".to_string())]
   );
 }
+
+#[test]
+fn test_edge_case_ssh() {
+  let index = Index::build(
+    vec![
+      ("services.openssh.settings", 0),
+      ("home-manager.users.<name>.programs.ssh.settings", 0),
+    ]
+    .as_slice(),
+  );
+
+  assert_eq!(
+    index.search(Some(0), "services.openssh.settings", 10).unwrap(),
+    vec![(0, 0, "services.openssh.settings".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "services*penssh.settings", 10).unwrap(),
+    vec![(0, 0, "services.openssh.settings".to_string())]
+  );
+
+  assert_eq!(
+    index.search(Some(0), "programs.ssh.settings", 10).unwrap(),
+    vec![(0, 0, "home-manager.users.<name>.programs.ssh.settings".to_string())]
+  );
+  assert_eq!(
+    index.search(Some(0), "programs*ssh.settings", 10).unwrap(),
+    vec![(0, 0, "home-manager.users.<name>.programs.ssh.settings".to_string())]
+  );
+}
